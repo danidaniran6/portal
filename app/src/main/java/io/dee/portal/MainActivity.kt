@@ -21,6 +21,8 @@ class MainActivity : AppCompatActivity() {
         }
 
 
-        binding.apply { }
+        binding.apply {
+            map.setMyLocationEnabled(true)
+        }
     }
 }

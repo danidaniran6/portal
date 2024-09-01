@@ -1,6 +1,7 @@
 [versions]
 agp = "8.6.0"
 commonSdk = "0.0.3"
+firebaseBom = "33.2.0"
 kotlin = "2.0.10"
 coreKtx = "1.13.1"
 junit = "4.13.2"
@@ -11,12 +12,20 @@ material = "1.12.0"
 activity = "1.9.1"
 constraintlayout = "2.1.4"
 mobileSdk = "1.0.3"
-playServicesGcm = "21.3.0"
+navigationFragmentKtx = "2.7.7"
+playServicesGcm = "17.0.0"
+retrofit = "2.11.0"
+roomRuntime = "2.6.1"
 servicesSdk = "1.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-navigation-fragment-ktx = { module = "androidx.navigation:navigation-fragment-ktx", version.ref = "navigationFragmentKtx" }
+androidx-navigation-ui-ktx = { module = "androidx.navigation:navigation-ui-ktx", version.ref = "navigationFragmentKtx" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 common-sdk = { module = "neshan-android-sdk:common-sdk", version.ref = "commonSdk" }
+
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -27,6 +36,8 @@ androidx-constraintlayout = { group = "androidx.constraintlayout", name = "const
 mobile-sdk = { module = "neshan-android-sdk:mobile-sdk", version.ref = "mobileSdk" }
 play-services-gcm = { module = "com.google.android.gms:play-services-gcm", version.ref = "playServicesGcm" }
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesGcm" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+retrofit-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
 services-sdk = { module = "neshan-android-sdk:services-sdk", version.ref = "servicesSdk" }
 
 [plugins]

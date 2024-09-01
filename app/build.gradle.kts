@@ -52,10 +52,23 @@ dependencies {
 
     //Neshan sdk library
     implementation(libs.mobile.sdk)
+
     implementation(libs.services.sdk)
     implementation(libs.common.sdk)
 
     //Play Services
     implementation(libs.play.services.gcm)
     implementation(libs.play.services.location)
+
+    // navigation
+    implementation(libs.androidx.navigation.fragment.ktx)
+    implementation(libs.androidx.navigation.ui.ktx)
+
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+
+    // room database
+    implementation(libs.androidx.room.runtime)
+    annotationProcessor(libs.androidx.room.compiler)
+
 }
