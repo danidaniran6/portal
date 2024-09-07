@@ -1,6 +1,14 @@
 [versions]
 agp = "8.6.0"
+
 commonSdk = "0.0.3"
+dexter = "6.2.3"
+hiltAndroid = "2.52"
+loggingInterceptor = "4.12.0"
+mobileSdk = "1.0.3"
+roomKtx = "2.6.1"
+servicesSdk = "1.0.0"
+
 firebaseBom = "33.2.0"
 kotlin = "2.0.10"
 coreKtx = "1.13.1"
@@ -9,14 +17,15 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 appcompat = "1.7.0"
 material = "1.12.0"
-activity = "1.9.1"
+activity = "1.9.2"
 constraintlayout = "2.1.4"
-mobileSdk = "1.0.3"
-navigationFragmentKtx = "2.7.7"
+navigationFragmentKtx = "2.8.0"
 playServicesGcm = "17.0.0"
+playServicesLocation = "21.3.0"
 retrofit = "2.11.0"
 roomRuntime = "2.6.1"
-servicesSdk = "1.0.0"
+hilt = "2.52"
+
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -26,21 +35,27 @@ androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref =
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 common-sdk = { module = "neshan-android-sdk:common-sdk", version.ref = "commonSdk" }
 
+dexter = { module = "com.karumi:dexter", version.ref = "dexter" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
+hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "loggingInterceptor" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 mobile-sdk = { module = "neshan-android-sdk:mobile-sdk", version.ref = "mobileSdk" }
 play-services-gcm = { module = "com.google.android.gms:play-services-gcm", version.ref = "playServicesGcm" }
-play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesGcm" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 retrofit-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomKtx" }
 services-sdk = { module = "neshan-android-sdk:services-sdk", version.ref = "servicesSdk" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 

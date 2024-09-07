@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">Portal</string>
+    <string name="origin">مبدا</string>
+    <string name="destination">مقصد</string>
+    <string name="search">جستجو</string>
+    <string name="user_current_location">موقعیت کنونی</string>
+    <string name="search_for_driver">جستجو راننده</string>
+    <string name="search_on_map">جستجو بر روی نقشه</string>
+    <string name="press_back_again_to_exit">برای خروچ از برنامه دوبار کلیک کنید</string>
 </resources>

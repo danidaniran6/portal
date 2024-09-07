@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <import type="android.view.View" />
+
+        <variable
+            name="isFromSearch"
+            type="boolean" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/round_4_secondary">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/clContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <LinearLayout
+                android:id="@+id/llTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
+
+                <ImageView
+                    android:id="@+id/ivTypeIcon"
+                    android:layout_width="25dp"
+                    android:layout_height="25dp"
+                    android:alpha="0.5"
+                    android:padding="5dp"
+                    android:src="@drawable/ic_refresh"
+                    android:visibility="@{isFromSearch?View.GONE:View.VISIBLE}"
+                    app:tint="@color/black" />
+
+                <TextView
+                    android:id="@+id/tvLocationTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:paddingHorizontal="4dp"
+                    android:textAlignment="textStart"
+                    android:textFontWeight="600"
+                    android:textSize="14sp"
+                    tools:text="address title" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvLocationAddress"
+                android:layout_width="391dp"
+                android:layout_height="26dp"
+                android:layout_marginTop="5dp"
+                android:alpha="0.7"
+                android:paddingHorizontal="4dp"
+                android:textAlignment="textStart"
+                android:textFontWeight="400"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/llTitle"
+                tools:text="address" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/primary"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/clContent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

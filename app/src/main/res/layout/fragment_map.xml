@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <import type="android.view.View" />
+
+        <variable
+            name="isOriginFilled"
+            type="boolean" />
+
+        <variable
+            name="isDestinationFilled"
+            type="boolean" />
+
+
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <org.neshan.mapsdk.MapView
+            android:id="@+id/map"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:text="Hello World!"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnMyLocation"
+                style="@style/Widget.Material3.CardView.Filled"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginBottom="5dp"
+                android:src="@drawable/ic_my_location"
+                app:cardBackgroundColor="@color/primary"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="5dp"
+                app:contentPadding="8dp"
+                app:layout_constraintBottom_toTopOf="@+id/cvBottom"
+                app:layout_constraintEnd_toEndOf="@+id/cvBottom">
+
+                <ImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/ic_my_location"
+                    app:tint="@color/button_background" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cvBottom"
+                style="@style/Widget.Material3.CardView.Filled"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="15dp"
+                android:clickable="true"
+                android:focusable="true"
+
+                app:cardBackgroundColor="@color/primary"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="5dp"
+                app:contentPadding="15dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                tools:layout_editor_absoluteX="15dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/origin"
+                        android:textSize="14sp" />
+
+                    <LinearLayout
+                        android:id="@+id/llOriginLocation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/round_4_secondary"
+                        android:gravity="center"
+                        android:padding="10dp">
+
+                        <ImageView
+                            android:id="@+id/btnClearOriginLocation"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:alpha="0.7"
+                            android:animateLayoutChanges="true"
+                            android:src="@drawable/close_square"
+                            android:visibility="@{isOriginFilled?View.VISIBLE:View.GONE}"
+                            app:tint="@color/red" />
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:alpha="0.5"
+                            android:animateLayoutChanges="true"
+                            android:src="@drawable/ic_search_linear"
+                            android:visibility="@{isOriginFilled?View.GONE:View.VISIBLE}"
+                            app:tint="@color/black" />
+
+                        <TextView
+                            android:id="@+id/tvOriginLocation"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:hint="@string/search_on_map"
+                            android:textAlignment="viewEnd"
+                            android:textSize="12sp" />
+
+
+                    </LinearLayout>
+
+                    <TextView
+
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/destination"
+                        android:textSize="14sp" />
+
+                    <LinearLayout
+                        android:id="@+id/llDestinationLocation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="5dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/round_4_secondary"
+                        android:gravity="center"
+                        android:padding="10dp">
+
+                        <ImageView
+                            android:id="@+id/btnClearDestinationLocation"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:alpha="0.7"
+                            android:animateLayoutChanges="true"
+                            android:src="@drawable/close_square"
+                            android:visibility="@{isDestinationFilled?View.VISIBLE:View.GONE}"
+                            app:tint="@color/red" />
+
+                        <ImageView
+                            visibility="@{isDestinationFilled?View.GONE:View.VISIBLE}"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:alpha="0.5"
+                            android:animateLayoutChanges="true"
+                            android:src="@drawable/ic_search_linear"
+
+                            app:tint="@color/black" />
+
+                        <TextView
+                            android:id="@+id/tvDestinationLocation"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:hint="@string/search_on_map"
+                            android:textAlignment="viewEnd"
+                            android:textSize="12sp" />
+
+
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:layout_width="match_parent"
+                        android:layout_height="55dp"
+                        android:layout_marginTop="25dp"
+                        android:text="@string/search_for_driver"
+                        android:textColor="@color/just_white"
+                        android:textFontWeight="700"
+                        app:backgroundTint="@color/button_background"
+                        app:cornerRadius="10dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </org.neshan.mapsdk.MapView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>
