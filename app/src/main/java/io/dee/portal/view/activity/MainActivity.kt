@@ -1,4 +1,4 @@
-package io.dee.portal.view
+package io.dee.portal.view.activity
 
 import android.os.Bundle
 import android.os.Handler

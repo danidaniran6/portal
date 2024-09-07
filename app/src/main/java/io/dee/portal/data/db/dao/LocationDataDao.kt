@@ -1,10 +1,10 @@
-package io.dee.portal.data.dao
+package io.dee.portal.data.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import io.dee.portal.data.local.LocationData
+import io.dee.portal.data.db.entity.LocationData
 import kotlinx.coroutines.flow.Flow
 
 @Dao

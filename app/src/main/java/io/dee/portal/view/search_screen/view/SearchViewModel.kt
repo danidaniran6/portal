@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.dee.portal.data.local.Location
-import io.dee.portal.data.local.LocationData
+import io.dee.portal.data.db.entity.LocationData
 import io.dee.portal.view.search_screen.data.SearchRepository
 import io.dee.portal.view.search_screen.data.SearchState
 import kotlinx.coroutines.flow.MutableStateFlow

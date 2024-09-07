@@ -1,6 +1,6 @@
 package io.dee.portal.view.search_screen.data
 
-import io.dee.portal.data.local.LocationData
+import io.dee.portal.data.db.entity.LocationData
 import io.dee.portal.view.search_screen.data.dto.SearchDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow

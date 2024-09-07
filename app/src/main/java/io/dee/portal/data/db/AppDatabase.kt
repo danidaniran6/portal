@@ -1,11 +1,11 @@
-package io.dee.portal.data
+package io.dee.portal.data.db
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import io.dee.portal.data.dao.LocationDataDao
-import io.dee.portal.data.local.LocationData
+import io.dee.portal.data.db.dao.LocationDataDao
+import io.dee.portal.data.db.entity.LocationData
 import io.dee.portal.utils.DATABASE_NAME
 
 @Database(entities = [LocationData::class], version = 1, exportSchema = false)

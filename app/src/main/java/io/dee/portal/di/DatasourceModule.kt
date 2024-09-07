@@ -5,7 +5,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.dee.portal.api.PortalService
-import io.dee.portal.data.dao.LocationDataDao
+import io.dee.portal.data.db.dao.LocationDataDao
 import io.dee.portal.view.map_screen.data.datasource.ReverseGeoCodingDatasource
 import io.dee.portal.view.map_screen.data.datasource.ReverseGeoCodingDatasourceImpl
 import io.dee.portal.view.search_screen.data.SearchLocalDatasource
@@ -16,7 +16,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-class DatasourceModule {
+object DatasourceModule {
     @Provides
     @Singleton
     fun provideReverseGeoCodingDatasource(

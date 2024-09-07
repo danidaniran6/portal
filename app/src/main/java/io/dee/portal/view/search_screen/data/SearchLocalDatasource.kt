@@ -1,7 +1,7 @@
 package io.dee.portal.view.search_screen.data
 
-import io.dee.portal.data.dao.LocationDataDao
-import io.dee.portal.data.local.LocationData
+import io.dee.portal.data.db.dao.LocationDataDao
+import io.dee.portal.data.db.entity.LocationData
 import kotlinx.coroutines.flow.Flow
 
 interface SearchLocalDatasource {

@@ -1,4 +1,4 @@
-package io.dee.portal.data.local
+package io.dee.portal.data.db.entity
 
 import androidx.room.Entity
 
