@@ -2,6 +2,7 @@ package io.dee.portal.api
 
 import io.dee.portal.BuildConfig
 import io.dee.portal.view.map_screen.data.dto.ReverseGeocodingResponse
+import io.dee.portal.view.map_screen.data.dto.RouteResponse
 import io.dee.portal.view.search_screen.data.dto.SearchDto
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -23,23 +24,29 @@ interface PortalService {
         @Query("term") term: String, @Query("lat") lat: Double, @Query("lng") lng: Double
     ): Response<SearchDto>
 
+    @GET("v4/direction/no-traffic")
+    suspend fun fetchRouting(
+        @Query("origin") origin: String, @Query("destination") destination: String
+    ): Response<RouteResponse>
+
+
     companion object {
         fun create(): PortalService {
             val logger =
                 HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
             val client = OkHttpClient.Builder().addInterceptor(logger).addInterceptor { chain ->
-                    val request = chain.request().newBuilder()
-                        .addHeader("Api-Key", BuildConfig.PORTAL_API_KEY).build()
-                    try {
-                        chain.proceed(request)
-                    } catch (e: Exception) {
-                        okhttp3.Response.Builder().request(request)
-                            .protocol(okhttp3.Protocol.HTTP_1_1).code(500).message(e.message ?: "")
-                            .build()
-                    }
+                val request = chain.request().newBuilder()
+                    .addHeader("Api-Key", BuildConfig.PORTAL_API_KEY).build()
+                try {
+                    chain.proceed(request)
+                } catch (e: Exception) {
+                    okhttp3.Response.Builder().request(request)
+                        .protocol(okhttp3.Protocol.HTTP_1_1).code(500).message(e.message ?: "")
+                        .build()
+                }
 
 
-                }.build()
+            }.build()
             val retrofit = Retrofit.Builder().baseUrl("https://api.neshan.org/").client(client)
                 .addConverterFactory(GsonConverterFactory.create()).build()
 

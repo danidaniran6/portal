@@ -16,6 +16,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import io.dee.portal.R
 import io.dee.portal.databinding.BottomSheetSearchBinding
 import io.dee.portal.view.base.BaseBottomSheet
+import io.dee.portal.view.search_screen.data.SearchUiState
 import kotlinx.coroutines.launch
 import org.neshan.common.model.LatLng
 
@@ -73,7 +74,7 @@ class SearchScreenBottomSheet(
 
             etSearch.doAfterTextChanged {
                 searchHandler.removeCallbacks(searchRunnable)
-                searchHandler.postDelayed(searchRunnable, 500)
+                searchHandler.postDelayed(searchRunnable, 800)
             }
             cvUserCurrentLocation.setOnClickListener {
                 currentLocationSelected()
@@ -85,13 +86,16 @@ class SearchScreenBottomSheet(
     override fun bindObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
-                viewModel.searchState.collect { state ->
-                    if (state.isLoading) {
-
-                    } else {
-                        searchAdapter.submitList(state.searchedList)
+                viewModel.uiState.collect { state ->
+                    when (state) {
+                        is SearchUiState.Error -> {}
+                        is SearchUiState.Loading -> {}
+                        is SearchUiState.Success -> {
+                            searchAdapter.submitList(state.searchedList) {
+                                binding.rcSearchResult.smoothScrollToPosition(0)
+                            }
+                        }
                     }
-
                 }
             }
         }

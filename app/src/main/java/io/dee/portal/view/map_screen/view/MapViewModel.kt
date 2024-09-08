@@ -10,7 +10,9 @@ import io.dee.portal.view.map_screen.data.repository.MapRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.neshan.common.model.LatLng
 import org.neshan.mapsdk.model.Marker
+import org.neshan.mapsdk.model.Polyline
 import javax.inject.Inject
 
 @HiltViewModel
@@ -18,45 +20,126 @@ class MapViewModel @Inject constructor(
     private val repository: MapRepository
 ) : ViewModel() {
 
+    fun onEvent(event: MapEvents) {
+        when (event) {
+            is MapEvents.SetUserLocation -> updateUserLocation(event.location)
+            is MapEvents.SetOriginLocation -> updateOriginLocation(event.location)
+            is MapEvents.SetDestinationLocation -> updateDestinationLocation(event.location)
+            is MapEvents.SetOriginDestinationLocation -> {
+                updateOriginLocation(event.origin)
+                updateDestinationLocation(event.destination)
+            }
+
+            MapEvents.ClearOriginLocation -> {
+                updateOriginLocation(null)
+            }
+
+            MapEvents.ClearDestinationLocation -> {
+                updateDestinationLocation(null)
+            }
+
+            is MapEvents.SetOriginMarker -> {
+                updateOriginMarker(event.marker)
+            }
+
+            is MapEvents.SetDestinationMarker -> {
+                updateDestinationMarker(event.marker)
+            }
+
+            is MapEvents.SetUserMarker -> {
+                updateUserMarker(event.marker)
+            }
+
+            is MapEvents.SetOriginToDestinationLine -> {
+//                updateOriginToDestinationLine(event.line)
+                getRoute()
+            }
+        }
+    }
+
     private val _userMarker: MutableLiveData<Marker?> = MutableLiveData()
     var userMarker: LiveData<Marker?> = _userMarker
-    fun updateUserMarker(marker: Marker?) {
+    private fun updateUserMarker(marker: Marker?) {
         _userMarker.value = marker
     }
 
     private val _originMarker: MutableLiveData<Marker?> = MutableLiveData()
     var originMarker: LiveData<Marker?> = _originMarker
-    fun updateOriginMarker(marker: Marker?) {
+    private fun updateOriginMarker(marker: Marker?) {
         _originMarker.value = marker
     }
 
     private val _destinationMarker: MutableLiveData<Marker?> = MutableLiveData()
     var destinationMarker: LiveData<Marker?> = _destinationMarker
-    fun updateDestinationMarker(marker: Marker?) {
+    private fun updateDestinationMarker(marker: Marker?) {
         _destinationMarker.value = marker
     }
 
     private val _userLocation: MutableLiveData<Location?> = MutableLiveData()
     var userLocation: LiveData<Location?> = _userLocation
-    fun updateUserLocation(location: android.location.Location?) {
-        _userLocation.value = location?.let { Location(it) }
-    }
-    fun updateUserLocation(location: Location?) {
-        _userLocation.value = location
+
+    private fun updateUserLocation(location: Location?) = viewModelScope.launch {
+        withContext(Dispatchers.Main) {
+            _userLocation.value = location
+        }
+
     }
 
     private val _originLocation: MutableLiveData<Location?> = MutableLiveData()
     var originLocation: LiveData<Location?> = _originLocation
-    fun updateOriginLocation(location: Location?) {
-        _originLocation.value = location
+    private fun updateOriginLocation(location: Location?) = viewModelScope.launch {
+        withContext(Dispatchers.Main) {
+            _originLocation.value = location
+        }
     }
 
     private val _destinationLocation: MutableLiveData<Location?> = MutableLiveData()
     var destinationLocation: LiveData<Location?> = _destinationLocation
-    fun updateDestinationLocation(location: Location?) = viewModelScope.launch {
+
+    private fun updateDestinationLocation(location: Location?) = viewModelScope.launch {
         withContext(Dispatchers.Main) {
             _destinationLocation.value = location
-
         }
     }
+
+    private val _originToDestinationLine: MutableLiveData<Polyline?> = MutableLiveData()
+    var originToDestinationLine: LiveData<Polyline?> = _originToDestinationLine
+    private fun updateOriginToDestinationLine(line: Polyline?) {
+        _originToDestinationLine.value = line
+    }
+
+    private val _routingState: MutableLiveData<RoutingState> = MutableLiveData()
+    var routingState: LiveData<RoutingState> = _routingState
+    fun getRoute() = viewModelScope.launch {
+        _routingState.value = RoutingState.Loading
+        val res = repository.getRoute(_originLocation.value!!, _destinationLocation.value!!)
+        _routingState.value = res
+    }
+}
+
+sealed interface RoutingState {
+    data object Loading : RoutingState
+    data class Success(
+        val routeOverviewPolylinePoints: List<LatLng>,
+        val decodedSteps: List<List<LatLng>>
+    ) : RoutingState
+
+    data class Error(val message: String? = null) : RoutingState
+}
+
+sealed interface MapEvents {
+    data class SetUserLocation(val location: Location?) : MapEvents
+    data class SetOriginLocation(val location: Location?) : MapEvents
+    data class SetDestinationLocation(val location: Location?) : MapEvents
+    data class SetOriginDestinationLocation(val origin: Location?, val destination: Location?) :
+        MapEvents
+
+    data class SetOriginToDestinationLine(val line: Polyline?) : MapEvents
+
+    data object ClearOriginLocation : MapEvents
+    data object ClearDestinationLocation : MapEvents
+    data class SetOriginMarker(val marker: Marker?) : MapEvents
+    data class SetDestinationMarker(val marker: Marker?) : MapEvents
+    data class SetUserMarker(val marker: Marker?) : MapEvents
+
 }

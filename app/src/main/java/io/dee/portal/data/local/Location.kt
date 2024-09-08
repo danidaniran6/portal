@@ -14,6 +14,8 @@ data class Location(
     constructor(location: Location) : this() {
         this.latitude = location.latitude
         this.longitude = location.longitude
+        this.title = "موقغیت کنونی"
+        this.address = "موقغیت کنونی"
     }
 
     constructor(data: SearchDto.Item?) : this() {
@@ -22,13 +24,13 @@ data class Location(
             this.longitude = data.location?.y ?: 0.0
             this.address = data.address ?: ""
             this.title = data.title ?: ""
-            this.from = Type.SEARCH
+            this.from = Type.Search
         }
 
     }
 
     enum class Type {
-        SEARCH, Local, None
+        Search, Local, None
     }
 
     fun getLatLng(): LatLng {
@@ -38,6 +40,6 @@ data class Location(
     fun getAddressOrLatLngString() =
         if (this.address.isNotEmpty()) this.address else getLatLngString()
 
-    fun getLatLngString() = "${this.latitude}, ${this.longitude}"
+    fun getLatLngString() = "${this.latitude},${this.longitude}"
 }
 

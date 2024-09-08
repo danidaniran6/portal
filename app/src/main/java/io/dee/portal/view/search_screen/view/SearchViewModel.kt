@@ -3,14 +3,16 @@ package io.dee.portal.view.search_screen.view
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.dee.portal.data.local.Location
 import io.dee.portal.data.db.entity.LocationData
+import io.dee.portal.data.local.Location
 import io.dee.portal.view.search_screen.data.SearchRepository
-import io.dee.portal.view.search_screen.data.SearchState
+import io.dee.portal.view.search_screen.data.SearchUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,24 +20,44 @@ import javax.inject.Inject
 class SearchViewModel @Inject constructor(
     private val repository: SearchRepository
 ) : ViewModel() {
-    private val _searchState = MutableStateFlow(SearchState())
+    private val _searchState = MutableStateFlow<SearchUiState>(SearchUiState.Loading)
     val searchState = _searchState.asStateFlow()
-
-    init {
-        repository.getAllLocationsAsFlow().onEach {
-            _searchState.value = _searchState.value.copy(
-                searchedList = it.sortedByDescending { it.createdAt }.map {
-                    Location().apply {
-                        latitude = it.latitude
-                        longitude = it.longitude
-                        address = it.address
-                        title = it.title
-                        from = Location.Type.Local
-                    }
+    val localLocationsState =
+        repository.getAllLocationsAsFlow().map<List<LocationData>, SearchUiState> { list ->
+            val targetList = list.map {
+                Location().apply {
+                    latitude = it.latitude
+                    longitude = it.longitude
+                    address = it.address
+                    title = it.title
+                    from = Location.Type.Local
                 }
-            )
-        }.launchIn(viewModelScope)
-    }
+            }
+            SearchUiState.Success("", targetList)
+        }.catch { SearchUiState.Error(it) }.stateIn(
+            viewModelScope,
+            kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+            SearchUiState.Loading
+        )
+
+    val uiState = localLocationsState.combine(searchState) { local, search ->
+        if (local is SearchUiState.Success && search is SearchUiState.Success) {
+            val localList = local.searchedList
+            val apiList = search.searchedList
+            val term = search.term
+            SearchUiState.Success(term, localList.filter {
+                it.title.contains(term, true) ||
+                        it.address.contains(term, true)
+            }.plus(apiList))
+        } else {
+            local
+        }
+    }.stateIn(
+        viewModelScope,
+        kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
+        SearchUiState.Loading
+    )
+
 
     fun onEvent(event: SearchEvents) {
         when (event) {
@@ -60,17 +82,8 @@ class SearchViewModel @Inject constructor(
         repository.insertLocation(loc)
     }
 
-
     private fun search(term: String, lat: Double, lng: Double) = viewModelScope.launch {
-        _searchState.value = _searchState.value.copy(
-            isLoading = true, term = term
-        )
-        val list = repository.search(term, lat, lng)?.map {
-            Location(it)
-        }?.filter { it.latitude != 0.0 && it.longitude != 0.0 }
-        _searchState.value = _searchState.value.copy(
-            isLoading = false, searchedList = list ?: emptyList()
-        )
+        _searchState.emit(repository.search(term, lat, lng))
     }
 }
 

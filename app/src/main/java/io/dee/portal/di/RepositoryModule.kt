@@ -5,8 +5,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.dee.portal.view.map_screen.data.datasource.ReverseGeoCodingDatasource
+import io.dee.portal.view.map_screen.data.datasource.RoutingRemoteDatasource
 import io.dee.portal.view.map_screen.data.repository.MapRepository
 import io.dee.portal.view.map_screen.data.repository.MapRepositoryImpl
+import io.dee.portal.view.search_driver.data.SearchDriverRemoteDatasource
+import io.dee.portal.view.search_driver.data.SearchDriverRepository
+import io.dee.portal.view.search_driver.data.SearchDriverRepositoryImpl
 import io.dee.portal.view.search_screen.data.SearchLocalDatasource
 import io.dee.portal.view.search_screen.data.SearchRemoteDatasource
 import io.dee.portal.view.search_screen.data.SearchRepository
@@ -19,9 +23,10 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideMapRepository(
-        datasource: ReverseGeoCodingDatasource
+        datasource: ReverseGeoCodingDatasource,
+        routingRemoteDatasource: RoutingRemoteDatasource
     ): MapRepository {
-        return MapRepositoryImpl(datasource)
+        return MapRepositoryImpl(datasource,routingRemoteDatasource)
     }
 
     @Provides
@@ -31,6 +36,14 @@ object RepositoryModule {
         localDatasource: SearchLocalDatasource
     ): SearchRepository {
         return SearchRepositoryImpl(remoteDatasource, localDatasource)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSearchDriverRepository(
+        remoteDatasource: SearchDriverRemoteDatasource
+    ): SearchDriverRepository {
+        return SearchDriverRepositoryImpl(remoteDatasource)
     }
 
 }

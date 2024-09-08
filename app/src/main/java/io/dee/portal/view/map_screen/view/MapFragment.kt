@@ -42,6 +42,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.dee.portal.BuildConfig
 import io.dee.portal.data.local.Location
 import io.dee.portal.databinding.FragmentMapBinding
+import io.dee.portal.view.search_driver.view.SearchDriverBottomSheet
 import io.dee.portal.view.search_screen.view.SearchScreenBottomSheet
 import org.neshan.common.model.LatLng
 import org.neshan.mapsdk.internal.utils.BitmapUtils
@@ -52,7 +53,7 @@ import java.util.Date
 
 @AndroidEntryPoint
 class MapFragment : Fragment() {
-    private val TAG = "MapFragment"
+    private val TAG = MapFragment::class.java.name
     private val REQUEST_CODE = 123
     private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 3000
     private val FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS: Long = 1000
@@ -72,8 +73,11 @@ class MapFragment : Fragment() {
     private var locationCallback: LocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             super.onLocationResult(locationResult)
-            viewModel.updateUserLocation(locationResult.lastLocation)
-            lastUpdateTime = DateFormat.getTimeInstance().format(Date())
+            locationResult.lastLocation?.let {
+                viewModel.onEvent(MapEvents.SetUserLocation(Location(it)))
+                lastUpdateTime = DateFormat.getTimeInstance().format(Date())
+            }
+
         }
     }
 
@@ -82,9 +86,9 @@ class MapFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         binding = FragmentMapBinding.inflate(inflater, container, false)
-//
-//        binding.map.settings.setNeshanLogoMargins(50, 50)
-//        binding.map.isPoiEnabled = true
+        binding.map.setZoom(15f, 0.25f)
+        binding.map.cachePath = requireContext().cacheDir
+        binding.map.cacheSize = 20
         return binding.root
     }
 
@@ -97,58 +101,67 @@ class MapFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         bindObservers()
         bindViews()
-
     }
 
     private fun bindViews() {
         binding.apply {
+            map.setOnMarkerClickListener {
+                it.showInfoWindow()
+                true
+            }
+            btnSearchDriver.setOnClickListener {
+                SearchDriverBottomSheet(onDriverFound = {
+
+                }).show(childFragmentManager, "")
+            }
             btnMyLocation.setOnClickListener {
                 shouldMoveCameraToUserLocation = true
-                viewModel.updateUserLocation(viewModel.userLocation.value)
+                viewModel.onEvent(MapEvents.SetUserLocation(viewModel.userLocation.value))
             }
             llOriginLocation.setOnClickListener {
                 SearchScreenBottomSheet(binding.map.cameraTargetPosition,
                     currentLocationSelected = {
-                        viewModel.updateOriginLocation(viewModel.userLocation.value)
+                        viewModel.onEvent(MapEvents.SetOriginLocation(viewModel.userLocation.value))
                     },
                     onItemSearched = {
-                        viewModel.updateOriginLocation(it)
+                        viewModel.onEvent(MapEvents.SetOriginLocation(it))
                     }).show(childFragmentManager, "")
             }
             llDestinationLocation.setOnClickListener {
                 SearchScreenBottomSheet(binding.map.cameraTargetPosition,
                     currentLocationSelected = {
-                        viewModel.updateDestinationLocation(viewModel.userLocation.value)
+                        viewModel.onEvent(MapEvents.SetDestinationLocation(viewModel.userLocation.value))
                     },
                     onItemSearched = {
-                        viewModel.updateDestinationLocation(it)
+                        viewModel.onEvent(MapEvents.SetDestinationLocation(it))
                     }).show(childFragmentManager, "")
             }
             btnClearOriginLocation.setOnClickListener {
-                viewModel.updateOriginLocation(null)
-                if (viewModel.originMarker.value != null) {
-                    binding.map.removeMarker(viewModel.originMarker.value)
-                    viewModel.updateUserMarker(null)
-                }
-
+                viewModel.onEvent(MapEvents.ClearOriginLocation)
             }
             btnClearDestinationLocation.setOnClickListener {
-                viewModel.updateDestinationLocation(null)
-                if (viewModel.destinationMarker.value != null) {
-                    binding.map.removeMarker(viewModel.destinationMarker.value)
-                    viewModel.updateDestinationMarker(null)
-                }
+                viewModel.onEvent(MapEvents.ClearDestinationLocation)
             }
 
             map.setOnMapLongClickListener {
-                viewModel.updateDestinationLocation(
-                    Location(
-                        it.latitude, it.longitude, ""
+                viewModel.onEvent(
+                    MapEvents.SetOriginDestinationLocation(
+                        origin = viewModel.userLocation.value, destination = Location(
+                            it.latitude, it.longitude, ""
+                        )
                     )
                 )
+
             }
 
         }
+    }
+
+    private fun clearPolyLine() {
+//        if (viewModel.originToDestinationLine.value != null) {
+//            binding.map.removePolyline(viewModel.originToDestinationLine.value)
+//            viewModel.updateOriginToDestinationLine(null)
+//        }
     }
 
     override fun onResume() {
@@ -230,7 +243,8 @@ class MapFragment : Fragment() {
             .addOnSuccessListener(requireActivity()) {
                 fusedLocationClient.lastLocation.addOnSuccessListener(requireActivity()) { location ->
                     if (location != null) {
-                        viewModel.updateUserLocation(location)
+                        val loc = Location(location)
+                        viewModel.onEvent(MapEvents.SetUserLocation(loc))
                     }
                 }
                 fusedLocationClient.requestLocationUpdates(
@@ -274,61 +288,97 @@ class MapFragment : Fragment() {
 
     fun bindObservers() {
         viewModel.apply {
-            userMarker.observe(viewLifecycleOwner) { marker ->
-                marker?.let {
-                    binding.map.addMarker(marker)
+
+            originToDestinationLine.observe(viewLifecycleOwner) { line ->
+                line?.let {
+                    binding.map.addPolyline(it)
+                    viewModel.originLocation.value?.let { origin ->
+                        binding.map.moveCamera(origin.getLatLng(), .5f)
+                    }
+                }
+            }
+            userLocation.observe(viewLifecycleOwner) {
+                onUpdateUserLocation(it)
+            }
+            originLocation.observe(viewLifecycleOwner) {
+                onUpdateOriginLocation(it)
+                if (destinationLocation.value != null) {
+                    drawPolyline(it, destinationLocation.value)
+                }
+            }
+            destinationLocation.observe(viewLifecycleOwner) {
+                onUpdateDestinationLocation(it)
+                if (originLocation.value != null) {
+                    drawPolyline(origin = originLocation.value, it)
                 }
             }
             originMarker.observe(viewLifecycleOwner) { marker ->
                 marker?.let {
-                    binding.map.addMarker(marker)
+                    binding.map.addMarker(it)
                 }
-
             }
             destinationMarker.observe(viewLifecycleOwner) { marker ->
                 marker?.let {
-                    binding.map.addMarker(marker)
-                }
-
-            }
-
-            userLocation.observe(viewLifecycleOwner) { location ->
-                onUpdateUserLocation(location)
-            }
-            originLocation.observe(viewLifecycleOwner) { origin ->
-                binding.isOriginFilled = origin != null
-                binding.tvOriginLocation.text = origin?.getAddressOrLatLngString() ?: ""
-
-                onUpdateOriginLocation(origin)
-                if (destinationLocation.value != null) {
-                    drawPolyline()
+                    binding.map.addMarker(it)
                 }
             }
-            destinationLocation.observe(viewLifecycleOwner) { destination ->
-                binding.isDestinationFilled = destination != null
-                binding.tvDestinationLocation.setText(destination?.getAddressOrLatLngString() ?: "")
-                onUpdateDestinationLocation(destination)
-                if (originLocation.value != null) {
-                    drawPolyline()
+            userMarker.observe(viewLifecycleOwner) { marker ->
+                marker?.let {
+                    binding.map.addMarker(it)
                 }
-
             }
+            routingState.observe(viewLifecycleOwner) { state ->
+                when (state) {
+                    is RoutingState.Loading -> {}
+                    is RoutingState.Success -> {
+                        val onMapPolyline =
+                            Polyline(
+                                state.routeOverviewPolylinePoints as ArrayList<LatLng>,
+                                getLineStyle()
+                            )
+
+                        //draw polyline between route points
+                        binding.map.addPolyline(onMapPolyline)
+                        // focusing camera on first point of drawn line
+                        mapSetPosition(true)
+                    }
+
+                    is RoutingState.Error -> {}
+                }
+            }
+        }
+
+    }
+
+    private fun mapSetPosition(overview: Boolean) {
+        val centerFirstMarkerX = viewModel.originMarker.value!!.latLng.latitude
+        val centerFirstMarkerY = viewModel.originMarker.value!!.latLng.longitude
+        if (overview) {
+            val centerFocalPositionX =
+                (centerFirstMarkerX + viewModel.destinationMarker.value!!.latLng.latitude) / 2
+            val centerFocalPositionY =
+                (centerFirstMarkerY + viewModel.destinationMarker.value!!.latLng.longitude) / 2
+            binding.map.moveCamera(LatLng(centerFocalPositionX, centerFocalPositionY), 0.5f)
+            binding.map.setZoom(14f, 0.5f)
+        } else {
+            binding.map.moveCamera(LatLng(centerFirstMarkerX, centerFirstMarkerY), 0.5f)
+            binding.map.setZoom(14f, 0.5f)
         }
     }
 
 
     private fun onUpdateUserLocation(loc: Location?) {
+
         if (loc == null) return
-        val location = LatLng(loc.latitude, loc.longitude)
-        binding.map.setZoom(15f, 0.25f)
         if (viewModel.userMarker.value != null) {
             binding.map.removeMarker(viewModel.userMarker.value)
-            viewModel.updateUserMarker(null)
+            viewModel.onEvent(MapEvents.SetUserMarker(null))
         }
+        val location = LatLng(loc.latitude, loc.longitude)
         val userMarkerStyle = buildUserMarkerStyle()
-        viewModel.updateUserMarker(Marker(location, userMarkerStyle).apply {
+        viewModel.onEvent(MapEvents.SetUserMarker(Marker(location, userMarkerStyle).apply {
             title = "User"
-        })
+        }))
         if (shouldMoveCameraToUserLocation) {
             binding.map.moveCamera(
                 LatLng(location.latitude, location.longitude), 0.25f
@@ -338,32 +388,36 @@ class MapFragment : Fragment() {
     }
 
     private fun onUpdateOriginLocation(loc: Location?) {
-        if (loc == null) return
-        val location = loc.getLatLng()
         if (viewModel.originMarker.value != null) {
             binding.map.removeMarker(viewModel.originMarker.value)
-            viewModel.updateOriginMarker(null)
+            viewModel.onEvent(MapEvents.SetOriginMarker(null))
         }
+        binding.isOriginFilled = loc != null
+        binding.tvOriginLocation.text = loc?.getAddressOrLatLngString() ?: ""
+        if (loc == null) return
+        val location = loc.getLatLng()
         val marketStyle = buildOriginMarkerStyle()
-        viewModel.updateOriginMarker(Marker(location, marketStyle).apply {
+        viewModel.onEvent(MapEvents.SetOriginMarker(Marker(location, marketStyle).apply {
             title = "Origin"
-        })
+        }))
         binding.map.moveCamera(
             LatLng(location.latitude, location.longitude), 0.25f
         )
     }
 
     private fun onUpdateDestinationLocation(loc: Location?) {
-        if (loc == null) return
-        val location = loc.getLatLng()
+        binding.isDestinationFilled = loc != null
+        binding.tvDestinationLocation.setText(loc?.getAddressOrLatLngString() ?: "")
         if (viewModel.destinationMarker.value != null) {
             binding.map.removeMarker(viewModel.destinationMarker.value)
-            viewModel.updateDestinationMarker(null)
+            viewModel.onEvent(MapEvents.SetDestinationMarker(null))
         }
+        if (loc == null) return
+        val location = loc.getLatLng()
         val marketStyle = buildDestinationMarkerStyle()
-        viewModel.updateDestinationMarker(Marker(location, marketStyle).apply {
+        viewModel.onEvent(MapEvents.SetDestinationMarker(Marker(location, marketStyle).apply {
             title = "Destination"
-        })
+        }))
         binding.map.moveCamera(
             LatLng(location.latitude, location.longitude), 0.25f
         )
@@ -371,7 +425,7 @@ class MapFragment : Fragment() {
 
     private fun buildUserMarkerStyle(): MarkerStyle {
         val style = MarkerStyleBuilder()
-        style.size = 10f
+        style.size = 20f
         style.bitmap = BitmapUtils.createBitmapFromAndroidBitmap(
             BitmapFactory.decodeResource(
                 resources, org.neshan.mapsdk.R.drawable.ic_marker
@@ -405,18 +459,22 @@ class MapFragment : Fragment() {
         return style.buildStyle()
     }
 
-    private fun drawPolyline() {
-        if (viewModel.originLocation.value == null) return
-        if (viewModel.destinationLocation.value == null) return
+    private fun drawPolyline(origin: Location?, destination: Location?) {
+        if (origin == null) return
+        if (destination == null) return
+        if (viewModel.originToDestinationLine.value != null) {
+            binding.map.removePolyline(viewModel.originToDestinationLine.value)
+            viewModel.onEvent(MapEvents.SetOriginToDestinationLine(null))
+        }
         val latLngs = ArrayList<LatLng>()
-        latLngs.add(viewModel.originLocation.value!!.getLatLng())
-        latLngs.add(viewModel.destinationLocation.value!!.getLatLng())
+        latLngs.add(origin.getLatLng())
+        latLngs.add(destination.getLatLng())
         val polyline = Polyline(latLngs, getLineStyle())
-        binding.map.addPolyline(polyline)
-        binding.map.moveCamera(viewModel.originLocation.value!!.getLatLng(), .5f)
+        viewModel.onEvent(MapEvents.SetOriginToDestinationLine(polyline))
+
     }
 
-    fun getLineStyle(): LineStyle {
+    private fun getLineStyle(): LineStyle {
         val lineStyleBuilder = LineStyleBuilder()
         lineStyleBuilder.color = Color(2, 119, 189, 190)
         lineStyleBuilder.width = 4f
@@ -439,3 +497,4 @@ class MapFragment : Fragment() {
     }
 
 }
+

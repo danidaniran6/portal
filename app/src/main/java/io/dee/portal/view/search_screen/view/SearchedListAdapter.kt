@@ -23,7 +23,7 @@ class SearchedListAdapter(
             binding.apply {
                 tvLocationTitle.text = item.title
                 tvLocationAddress.text = item.address
-                isFromSearch = item.from == Location.Type.SEARCH
+                isFromSearch = item.from == Location.Type.Search
             }
         }
     }

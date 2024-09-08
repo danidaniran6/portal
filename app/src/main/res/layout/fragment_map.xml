@@ -178,6 +178,7 @@
                     <com.google.android.material.button.MaterialButton
                         android:layout_width="match_parent"
                         android:layout_height="55dp"
+                        android:id="@+id/btnSearchDriver"
                         android:layout_marginTop="25dp"
                         android:text="@string/search_for_driver"
                         android:textColor="@color/just_white"
