@@ -14,6 +14,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import io.dee.portal.R
+import io.dee.portal.data.local.Location
 import io.dee.portal.databinding.BottomSheetSearchBinding
 import io.dee.portal.view.base.BaseBottomSheet
 import io.dee.portal.view.search_screen.data.SearchUiState
@@ -23,7 +24,7 @@ import org.neshan.common.model.LatLng
 class SearchScreenBottomSheet(
     private val userLocation: LatLng,
     private val currentLocationSelected: () -> Unit,
-    private val onItemSearched: (io.dee.portal.data.local.Location) -> Unit
+    private val onItemSearched: (Location) -> Unit
 ) : BaseBottomSheet() {
     private lateinit var binding: BottomSheetSearchBinding
     private val viewModel: SearchViewModel by viewModels()

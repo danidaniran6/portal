@@ -4,6 +4,7 @@
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
         <item name="android:fontFamily">@font/yekan_bakh_family</item>
+        <item name="android:textColor">@color/black</item>
     </style>
 
     <style name="Theme.Portal" parent="Base.Theme.Portal" />

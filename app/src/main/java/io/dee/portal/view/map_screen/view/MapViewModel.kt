@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.dee.portal.data.local.Location
 import io.dee.portal.view.map_screen.data.repository.MapRepository
+import io.dee.portal.view.search_driver.data.dto.Driver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,8 +52,25 @@ class MapViewModel @Inject constructor(
             }
 
             is MapEvents.SetOriginToDestinationLine -> {
-//                updateOriginToDestinationLine(event.line)
+                updateOriginToDestinationLine(event.line)
+            }
+
+            MapEvents.GetRoute -> {
                 getRoute()
+            }
+
+            is MapEvents.SetRoutePolyline -> {
+                updateRoutePolyline(event.line)
+            }
+
+            is MapEvents.UpdateDriver -> {
+                updateDriver(event.driver)
+            }
+
+            is MapEvents.CancelRouting -> {
+                updateOriginToDestinationLine(null)
+                updateRoutePolyline(null)
+                updateDestinationLocation(null)
             }
         }
     }
@@ -108,20 +126,32 @@ class MapViewModel @Inject constructor(
         _originToDestinationLine.value = line
     }
 
+    private val _routePolyline: MutableLiveData<Polyline?> = MutableLiveData()
+    var routePolyline: LiveData<Polyline?> = _routePolyline
+    private fun updateRoutePolyline(line: Polyline?) {
+        _routePolyline.value = line
+    }
+
     private val _routingState: MutableLiveData<RoutingState> = MutableLiveData()
     var routingState: LiveData<RoutingState> = _routingState
-    fun getRoute() = viewModelScope.launch {
+    private fun getRoute() = viewModelScope.launch {
         _routingState.value = RoutingState.Loading
         val res = repository.getRoute(_originLocation.value!!, _destinationLocation.value!!)
         _routingState.value = res
+    }
+
+    private val _driver: MutableLiveData<Driver?> = MutableLiveData()
+    val driver: LiveData<Driver?> = _driver
+    private fun updateDriver(driver: Driver?) {
+        _driver.value = driver
     }
 }
 
 sealed interface RoutingState {
     data object Loading : RoutingState
     data class Success(
-        val routeOverviewPolylinePoints: List<LatLng>,
-        val decodedSteps: List<List<LatLng>>
+        val routeOverviewPolylinePoints: ArrayList<LatLng>,
+        val decodedSteps: ArrayList<List<LatLng>>
     ) : RoutingState
 
     data class Error(val message: String? = null) : RoutingState
@@ -141,5 +171,9 @@ sealed interface MapEvents {
     data class SetOriginMarker(val marker: Marker?) : MapEvents
     data class SetDestinationMarker(val marker: Marker?) : MapEvents
     data class SetUserMarker(val marker: Marker?) : MapEvents
+    data object GetRoute : MapEvents
+    data class SetRoutePolyline(val line: Polyline?) : MapEvents
+    data class UpdateDriver(val driver: Driver?) : MapEvents
+    data object CancelRouting : MapEvents
 
 }

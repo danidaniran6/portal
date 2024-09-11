@@ -8,4 +8,7 @@
     <string name="search_on_map">جستجو بر روی نقشه</string>
     <string name="press_back_again_to_exit">برای خروچ از برنامه دوبار کلیک کنید</string>
     <string name="trying_to_find_nearest_driver">در حال یاقتن نزدیک ترین راننده به شما</string>
+    <string name="cancel_routing">لفو سفر</string>
+    <string name="routing_in_progress">در حال مسیریابی</string>
+    <string name="iran">ابران</string>
 </resources>

@@ -6,6 +6,7 @@ import io.dee.portal.view.map_screen.data.datasource.RoutingRemoteDatasource
 import io.dee.portal.view.map_screen.view.RoutingState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.neshan.common.model.LatLng
 import org.neshan.common.utils.PolylineEncoding
 
 interface MapRepository {
@@ -31,26 +32,34 @@ class MapRepositoryImpl(
 
     override suspend fun getRoute(origin: Location, destination: Location): RoutingState {
         return withContext(Dispatchers.IO) {
-            val res = routingRemoteDatasource.getRoute(origin, destination)
-            if (res.isSuccessful && res.body() != null) {
-                val routes = res.body()!!.routes
-                if (!routes.isNullOrEmpty()) {
-                    val route = routes[0]
-                    val routeOverviewPolylinePoints = route.overviewPolyline?.let {
-                        PolylineEncoding.decode(
-                            it.points
+            try {
+                val res = routingRemoteDatasource.getRoute(origin, destination)
+                if (res.isSuccessful && res.body() != null) {
+                    val routes = res.body()!!.routes
+                    if (!routes.isNullOrEmpty()) {
+                        val route = routes[0]
+                        val routeOverviewPolylinePoints = route.overviewPolyline?.let {
+                            PolylineEncoding.decode(
+                                it.points
+                            )
+                        } ?: emptyList()
+                        val decodedSteps = route.legs?.getOrNull(0)?.steps?.map {
+                            PolylineEncoding.decode(it.polyline)
+                        } ?: emptyList()
+                        RoutingState.Success(
+                            routeOverviewPolylinePoints as ArrayList<LatLng>,
+                            decodedSteps as ArrayList
                         )
-                    } ?: emptyList()
-                    val decodedSteps = route.legs?.getOrNull(0)?.steps?.map {
-                        PolylineEncoding.decode(it.polyline)
-                    } ?: emptyList()
-                    RoutingState.Success(routeOverviewPolylinePoints, decodedSteps)
+                    } else {
+                        RoutingState.Error("Something went wrong")
+                    }
                 } else {
                     RoutingState.Error("Something went wrong")
                 }
-            } else {
-                RoutingState.Error("Something went wrong")
+            } catch (e: Exception) {
+                RoutingState.Error(e.localizedMessage)
             }
+
         }
     }
 }

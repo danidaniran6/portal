@@ -109,9 +109,15 @@ class MapFragment : Fragment() {
                 it.showInfoWindow()
                 true
             }
+            btnCancelRouting.setOnClickListener {
+                clearRoutingLine()
+                viewModel.onEvent(MapEvents.CancelRouting)
+                binding.isRouting = false
+                viewModel.onEvent(MapEvents.SetOriginLocation(viewModel.originLocation.value))
+            }
             btnSearchDriver.setOnClickListener {
                 SearchDriverBottomSheet(onDriverFound = {
-
+                    viewModel.onEvent(MapEvents.UpdateDriver(it))
                 }).show(childFragmentManager, "")
             }
             btnMyLocation.setOnClickListener {
@@ -119,7 +125,8 @@ class MapFragment : Fragment() {
                 viewModel.onEvent(MapEvents.SetUserLocation(viewModel.userLocation.value))
             }
             llOriginLocation.setOnClickListener {
-                SearchScreenBottomSheet(binding.map.cameraTargetPosition,
+                SearchScreenBottomSheet(viewModel.userMarker.value?.latLng
+                    ?: binding.map.cameraTargetPosition,
                     currentLocationSelected = {
                         viewModel.onEvent(MapEvents.SetOriginLocation(viewModel.userLocation.value))
                     },
@@ -144,6 +151,7 @@ class MapFragment : Fragment() {
             }
 
             map.setOnMapLongClickListener {
+                if (binding.isRouting == true) return@setOnMapLongClickListener
                 viewModel.onEvent(
                     MapEvents.SetOriginDestinationLocation(
                         origin = viewModel.userLocation.value, destination = Location(
@@ -158,10 +166,17 @@ class MapFragment : Fragment() {
     }
 
     private fun clearPolyLine() {
-//        if (viewModel.originToDestinationLine.value != null) {
-//            binding.map.removePolyline(viewModel.originToDestinationLine.value)
-//            viewModel.updateOriginToDestinationLine(null)
-//        }
+        if (viewModel.originToDestinationLine.value != null) {
+            binding.map.removePolyline(viewModel.originToDestinationLine.value)
+            viewModel.onEvent(MapEvents.SetOriginToDestinationLine(null))
+        }
+    }
+
+    private fun clearRoutingLine() {
+        if (viewModel.routePolyline.value != null) {
+            binding.map.removePolyline(viewModel.routePolyline.value)
+            viewModel.onEvent(MapEvents.SetRoutePolyline(null))
+        }
     }
 
     override fun onResume() {
@@ -297,6 +312,12 @@ class MapFragment : Fragment() {
                     }
                 }
             }
+            routePolyline.observe(viewLifecycleOwner) { line ->
+                line?.let {
+                    binding.map.addPolyline(it)
+                }
+                mapSetPosition(viewModel.destinationMarker.value != null)
+            }
             userLocation.observe(viewLifecycleOwner) {
                 onUpdateUserLocation(it)
             }
@@ -327,27 +348,62 @@ class MapFragment : Fragment() {
                     binding.map.addMarker(it)
                 }
             }
+            driver.observe(viewLifecycleOwner) { driverInfo ->
+                driverInfo?.let {
+                    viewModel.onEvent(MapEvents.GetRoute)
+                    binding.tvDriverName.text = it.name
+                    binding.tvDriverCar.text = it.car.getCarName()
+                    binding.tvDriverPlateNumber.text = it.car.plateNumber.getPlateNumber()
+                    binding.tvDriverPlateCityId.text = it.car.plateNumber.code
+                }
+
+            }
             routingState.observe(viewLifecycleOwner) { state ->
                 when (state) {
-                    is RoutingState.Loading -> {}
-                    is RoutingState.Success -> {
-                        val onMapPolyline =
-                            Polyline(
-                                state.routeOverviewPolylinePoints as ArrayList<LatLng>,
-                                getLineStyle()
-                            )
-
-                        //draw polyline between route points
-                        binding.map.addPolyline(onMapPolyline)
-                        // focusing camera on first point of drawn line
-                        mapSetPosition(true)
+                    is RoutingState.Loading -> {
+                        binding.routingInProgress = true
+                        disableButtons()
+                        clearPolyLine()
                     }
 
-                    is RoutingState.Error -> {}
+                    is RoutingState.Success -> {
+                        val onMapPolyline = Polyline(
+                            state.routeOverviewPolylinePoints as ArrayList<LatLng>, getLineStyle()
+                        )
+                        viewModel.onEvent(MapEvents.SetRoutePolyline(onMapPolyline))
+                        binding.isRouting = true
+                        binding.routingInProgress = false
+                        enableButtons()
+                    }
+
+                    is RoutingState.Error -> {
+                        Toast.makeText(requireContext(), state.message, Toast.LENGTH_SHORT).show()
+                        binding.isRouting = false
+                        binding.routingInProgress = false
+                        enableButtons()
+                    }
                 }
             }
         }
 
+    }
+
+    private fun disableButtons() {
+        binding.apply {
+            btnClearOriginLocation.isEnabled = false
+            btnClearDestinationLocation.isEnabled = false
+            tvOriginLocation.isEnabled = false
+            tvDestinationLocation.isEnabled = false
+        }
+    }
+
+    private fun enableButtons() {
+        binding.apply {
+            btnClearOriginLocation.isEnabled = true
+            btnClearDestinationLocation.isEnabled = true
+            tvOriginLocation.isEnabled = true
+            tvDestinationLocation.isEnabled = true
+        }
     }
 
     private fun mapSetPosition(overview: Boolean) {
@@ -393,7 +449,8 @@ class MapFragment : Fragment() {
             viewModel.onEvent(MapEvents.SetOriginMarker(null))
         }
         binding.isOriginFilled = loc != null
-        binding.tvOriginLocation.text = loc?.getAddressOrLatLngString() ?: ""
+//        binding.tvOriginLocation.text = loc?.getAddressOrLatLngString() ?: ""
+        binding.origin = loc
         if (loc == null) return
         val location = loc.getLatLng()
         val marketStyle = buildOriginMarkerStyle()
@@ -407,7 +464,7 @@ class MapFragment : Fragment() {
 
     private fun onUpdateDestinationLocation(loc: Location?) {
         binding.isDestinationFilled = loc != null
-        binding.tvDestinationLocation.setText(loc?.getAddressOrLatLngString() ?: "")
+        binding.destination = loc
         if (viewModel.destinationMarker.value != null) {
             binding.map.removeMarker(viewModel.destinationMarker.value)
             viewModel.onEvent(MapEvents.SetDestinationMarker(null))

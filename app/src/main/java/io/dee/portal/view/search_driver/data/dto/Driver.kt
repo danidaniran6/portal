@@ -8,8 +8,23 @@ data class Driver(
     data class Car(
         val model: String,
         val color: String,
-        val plateNumber: String
-    )
+        val plateNumber: Plate
+    ) {
+        fun getCarName(): String {
+            return "$model $color"
+        }
+
+        data class Plate(
+            val left: String,
+            val letter: String,
+            val right: String,
+            val code: String
+        ) {
+            fun getPlateNumber(): String {
+                return "$right $letter $left"
+            }
+        }
+    }
 
 
 }

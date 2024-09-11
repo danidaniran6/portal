@@ -4,5 +4,7 @@
         <!-- Customize your dark theme here. -->
         <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
         <item name="android:fontFamily">@font/yekan_bakh_family</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="editTextColor">@color/black</item>
     </style>
 </resources>

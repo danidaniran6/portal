@@ -13,9 +13,9 @@ class SearchDriverRemoteDatasourceImpl() :
     SearchDriverRemoteDatasource {
     override suspend fun getDriver(): Response<Driver> {
         val mockDriver = Driver(
-            "John Doe",
+            "آقای راننده محترم",
             "1234567890",
-            Car("Toyota", "Red", "ABC123")
+            Car("پراید", "قرمز", Car.Plate("12", "ب", "345", "12"))
         )
         return Response.success(mockDriver)
     }

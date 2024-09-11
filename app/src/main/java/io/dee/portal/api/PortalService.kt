@@ -1,16 +1,25 @@
 package io.dee.portal.api
 
-import io.dee.portal.BuildConfig
+import android.content.Context
+import io.dee.portal.utils.AuthInterceptor
+import io.dee.portal.utils.ExceptionHandlingInterceptor
+import io.dee.portal.utils.NetworkAvailabilityInterceptor
+import io.dee.portal.utils.appBaseUrl
 import io.dee.portal.view.map_screen.data.dto.ReverseGeocodingResponse
 import io.dee.portal.view.map_screen.data.dto.RouteResponse
 import io.dee.portal.view.search_screen.data.dto.SearchDto
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.ResponseBody
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
+import java.io.InterruptedIOException
+import java.net.SocketTimeoutException
 
 interface PortalService {
 
@@ -21,7 +30,9 @@ interface PortalService {
 
     @GET("v1/search")
     suspend fun search(
-        @Query("term") term: String, @Query("lat") lat: Double, @Query("lng") lng: Double
+        @Query("term") term: String,
+        @Query("lat") lat: Double,
+        @Query("lng") lng: Double
     ): Response<SearchDto>
 
     @GET("v4/direction/no-traffic")
@@ -31,23 +42,39 @@ interface PortalService {
 
 
     companion object {
-        fun create(): PortalService {
+        fun create(context: Context): PortalService {
             val logger =
                 HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
-            val client = OkHttpClient.Builder().addInterceptor(logger).addInterceptor { chain ->
-                val request = chain.request().newBuilder()
-                    .addHeader("Api-Key", BuildConfig.PORTAL_API_KEY).build()
-                try {
-                    chain.proceed(request)
-                } catch (e: Exception) {
-                    okhttp3.Response.Builder().request(request)
-                        .protocol(okhttp3.Protocol.HTTP_1_1).code(500).message(e.message ?: "")
-                        .build()
+
+
+            val client = OkHttpClient.Builder().addInterceptor(logger)
+                .addInterceptor(NetworkAvailabilityInterceptor(context))
+                .addInterceptor(ExceptionHandlingInterceptor())
+                .addInterceptor(AuthInterceptor())
+                .addInterceptor { chain ->
+                    val original = chain.request()
+                    val requestBuilder = original.newBuilder()
+                    try {
+                        val response = chain.proceed(requestBuilder.build())
+                        response
+                    } catch (e: Exception) {
+                        val message = when (e) {
+                            is SocketTimeoutException -> "SocketTimeoutException: ${e.message}"
+                            is InterruptedIOException -> "InterruptedIOException: ${e.message}"
+                            else -> "Unknown Exception: ${e.message}"
+                        }
+                        okhttp3.Response.Builder()
+                            .request(chain.request())
+                            .protocol(Protocol.HTTP_1_1)
+                            .code(500)
+                            .message(message)
+                            .body(ResponseBody.create("text/plain".toMediaTypeOrNull(), ""))
+                            .build()
+                    }
+
                 }
-
-
-            }.build()
-            val retrofit = Retrofit.Builder().baseUrl("https://api.neshan.org/").client(client)
+                .build()
+            val retrofit = Retrofit.Builder().baseUrl(appBaseUrl).client(client)
                 .addConverterFactory(GsonConverterFactory.create()).build()
 
             return retrofit.create(PortalService::class.java)
