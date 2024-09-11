@@ -1,17 +1,18 @@
 package io.dee.portal.api
 
 import android.content.Context
+import io.dee.portal.map_screen.data.dto.ReverseGeocodingResponse
+import io.dee.portal.map_screen.data.dto.RouteResponse
+import io.dee.portal.search_screen.data.dto.SearchDto
 import io.dee.portal.utils.AuthInterceptor
 import io.dee.portal.utils.ExceptionHandlingInterceptor
 import io.dee.portal.utils.NetworkAvailabilityInterceptor
 import io.dee.portal.utils.appBaseUrl
-import io.dee.portal.view.map_screen.data.dto.ReverseGeocodingResponse
-import io.dee.portal.view.map_screen.data.dto.RouteResponse
-import io.dee.portal.view.search_screen.data.dto.SearchDto
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.ResponseBody
+import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -68,7 +69,7 @@ interface PortalService {
                             .protocol(Protocol.HTTP_1_1)
                             .code(500)
                             .message(message)
-                            .body(ResponseBody.create("text/plain".toMediaTypeOrNull(), ""))
+                            .body("".toResponseBody("text/plain".toMediaTypeOrNull()))
                             .build()
                     }
 

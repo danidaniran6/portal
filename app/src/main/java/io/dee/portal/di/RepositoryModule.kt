@@ -4,17 +4,17 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import io.dee.portal.view.map_screen.data.datasource.ReverseGeoCodingDatasource
-import io.dee.portal.view.map_screen.data.datasource.RoutingRemoteDatasource
-import io.dee.portal.view.map_screen.data.repository.MapRepository
-import io.dee.portal.view.map_screen.data.repository.MapRepositoryImpl
-import io.dee.portal.view.search_driver.data.SearchDriverRemoteDatasource
-import io.dee.portal.view.search_driver.data.SearchDriverRepository
-import io.dee.portal.view.search_driver.data.SearchDriverRepositoryImpl
-import io.dee.portal.view.search_screen.data.SearchLocalDatasource
-import io.dee.portal.view.search_screen.data.SearchRemoteDatasource
-import io.dee.portal.view.search_screen.data.SearchRepository
-import io.dee.portal.view.search_screen.data.SearchRepositoryImpl
+import io.dee.portal.map_screen.data.datasource.ReverseGeoCodingDatasource
+import io.dee.portal.map_screen.data.datasource.RoutingRemoteDatasource
+import io.dee.portal.map_screen.data.repository.MapRepository
+import io.dee.portal.map_screen.data.repository.MapRepositoryImpl
+import io.dee.portal.search_driver.data.SearchDriverRemoteDatasource
+import io.dee.portal.search_driver.data.SearchDriverRepository
+import io.dee.portal.search_driver.data.SearchDriverRepositoryImpl
+import io.dee.portal.search_screen.data.SearchLocalDatasource
+import io.dee.portal.search_screen.data.SearchRemoteDatasource
+import io.dee.portal.search_screen.data.SearchRepository
+import io.dee.portal.search_screen.data.SearchRepositoryImpl
 import javax.inject.Singleton
 
 @Module
@@ -26,7 +26,7 @@ object RepositoryModule {
         datasource: ReverseGeoCodingDatasource,
         routingRemoteDatasource: RoutingRemoteDatasource
     ): MapRepository {
-        return MapRepositoryImpl(datasource,routingRemoteDatasource)
+        return MapRepositoryImpl(datasource, routingRemoteDatasource)
     }
 
     @Provides

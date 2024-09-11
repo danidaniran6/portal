@@ -1,7 +1,7 @@
 package io.dee.portal.data.local
 
 import android.location.Location
-import io.dee.portal.view.search_screen.data.dto.SearchDto
+import io.dee.portal.search_screen.data.dto.SearchDto
 import org.neshan.common.model.LatLng
 
 data class Location(

@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/fragmentMap"
-        android:name="io.dee.portal.view.map_screen.view.MapFragment"
+        android:name="io.dee.portal.map_screen.view.MapFragment"
         android:label="MapFragment" />
 
 </navigation>

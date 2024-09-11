@@ -12,11 +12,11 @@ import okio.IOException
 
 class ExceptionHandlingInterceptor : Interceptor {
 
-    override fun intercept(chain: Interceptor.Chain): okhttp3.Response {
+    override fun intercept(chain: Interceptor.Chain): Response {
         return try {
             chain.proceed(chain.request())
         } catch (e: java.net.SocketException) {
-            okhttp3.Response.Builder()
+            Response.Builder()
                 .request(chain.request())
                 .protocol(Protocol.HTTP_1_1)
                 .code(500)
@@ -24,7 +24,7 @@ class ExceptionHandlingInterceptor : Interceptor {
                 .body((e.message ?: "").toResponseBody(null))
                 .build()
         } catch (e: java.net.SocketTimeoutException) {
-            okhttp3.Response.Builder()
+            Response.Builder()
                 .request(chain.request())
                 .protocol(Protocol.HTTP_1_1)
                 .code(500)
@@ -35,7 +35,7 @@ class ExceptionHandlingInterceptor : Interceptor {
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(500)
                 .message("InterruptedIOException").body("".toResponseBody(null)).build()
         } catch (e: IOException) {
-            okhttp3.Response.Builder()
+            Response.Builder()
                 .request(chain.request())
                 .protocol(Protocol.HTTP_1_1)
                 .code(500)
@@ -43,7 +43,7 @@ class ExceptionHandlingInterceptor : Interceptor {
                 .body((e.message ?: "").toResponseBody(null))
                 .build()
         } catch (e: Exception) {
-            okhttp3.Response.Builder()
+            Response.Builder()
                 .request(chain.request())
                 .protocol(Protocol.HTTP_1_1)
                 .code(500)
@@ -54,7 +54,7 @@ class ExceptionHandlingInterceptor : Interceptor {
     }
 }
 
-class AuthInterceptor() : Interceptor {
+class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
 
         val original = chain.request()
