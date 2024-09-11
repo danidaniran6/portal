@@ -18,7 +18,7 @@
         android:theme="@style/Theme.Portal"
         tools:targetApi="31">
         <activity
-            android:name="io.dee.core.activity.MainActivity"
+            android:name=".core.activity.MainActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>

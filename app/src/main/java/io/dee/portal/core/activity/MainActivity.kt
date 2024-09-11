@@ -1,4 +1,4 @@
-package io.dee.core.activity
+package io.dee.portal.core.activity
 
 import android.os.Bundle
 import android.os.Handler

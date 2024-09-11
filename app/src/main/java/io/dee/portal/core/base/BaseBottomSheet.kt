@@ -1,4 +1,4 @@
-package io.dee.core.base
+package io.dee.portal.core.base
 
 import android.os.Bundle
 import android.view.View
@@ -6,7 +6,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-abstract class BaseBottomSheet() : BottomSheetDialogFragment() {
+abstract class BaseBottomSheet : BottomSheetDialogFragment() {
     abstract fun bindVariables()
     abstract fun bindViews()
     abstract fun bindObservers()
