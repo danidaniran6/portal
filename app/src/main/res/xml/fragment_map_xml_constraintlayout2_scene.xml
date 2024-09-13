@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MotionScene xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:motion="http://schemas.android.com/apk/res-auto">
+
+    <Transition
+
+        motion:constraintSetEnd="@+id/end_to_fill"
+        motion:constraintSetStart="@id/start_to_fill"
+        motion:duration="1000">
+        <KeyFrameSet></KeyFrameSet>
+    </Transition>
+
+    <ConstraintSet android:id="@+id/start_to_fill">
+        <Constraint
+            android:id="@+id/cvTop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="15dp"
+            android:clickable="true"
+            android:focusable="true"
+            motion:cardBackgroundColor="@color/primary"
+            motion:cardCornerRadius="10dp"
+            motion:cardElevation="5dp"
+            motion:contentPadding="15dp"
+            motion:layout_constraintEnd_toEndOf="parent"
+            motion:layout_constraintStart_toStartOf="parent"
+            motion:layout_constraintTop_toTopOf="parent" />
+
+    </ConstraintSet>
+
+    <ConstraintSet android:id="@+id/end_to_fill">
+        <Constraint
+            android:id="@+id/cvTop"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_margin="15dp"
+            android:clickable="true"
+            android:focusable="true"
+            motion:cardBackgroundColor="@color/primary"
+
+            motion:cardCornerRadius="10dp"
+            motion:cardElevation="5dp"
+            motion:contentPadding="15dp"
+            motion:layout_constraintBottom_toBottomOf="parent"
+            motion:layout_constraintEnd_toEndOf="parent"
+            motion:layout_constraintStart_toStartOf="parent"
+            motion:layout_constraintTop_toTopOf="parent" />
+    </ConstraintSet>
+</MotionScene>

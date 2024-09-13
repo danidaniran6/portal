@@ -1,6 +1,7 @@
 package io.dee.portal.search_driver.view
 
 import android.os.Bundle
+import android.os.Handler
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -54,7 +55,10 @@ class SearchDriverBottomSheet(
                             Toast.makeText(requireContext(), "راننده پیدا شد", Toast.LENGTH_SHORT)
                                 .show()
                             onDriverFound(state.driver)
-                            dismiss()
+                            Handler(requireContext().mainLooper).postDelayed({
+                                dismiss()
+                            }, 1500)
+
                         }
 
                         is SearchDriverState.Error -> {

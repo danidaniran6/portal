@@ -35,6 +35,7 @@
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/constraintLayout2"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
@@ -42,370 +43,433 @@
             android:id="@+id/map"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:text="Hello World!"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btnMyLocation"
-                style="@style/Widget.Material3.CardView.Filled"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginBottom="5dp"
-                android:src="@drawable/ic_my_location"
-                app:cardBackgroundColor="@color/primary"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="5dp"
-                app:contentPadding="8dp"
-                app:layout_constraintBottom_toTopOf="@+id/cvBottom"
-                app:layout_constraintEnd_toEndOf="@+id/cvBottom">
 
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_my_location"
-                    app:tint="@color/button_background" />
-            </com.google.android.material.card.MaterialCardView>
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnMyLocation"
+            style="@style/Widget.Material3.CardView.Filled"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginBottom="5dp"
+            android:src="@drawable/ic_my_location"
+            app:cardBackgroundColor="@color/primary"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="5dp"
+            app:contentPadding="8dp"
+            app:layout_constraintBottom_toTopOf="@+id/cvBottom"
+            app:layout_constraintEnd_toEndOf="@+id/cvBottom">
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cvBottom"
-                style="@style/Widget.Material3.CardView.Filled"
+            <ImageView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="15dp"
-                android:clickable="true"
-                android:focusable="true"
+                android:layout_height="match_parent"
+                android:src="@drawable/ic_my_location"
+                app:tint="@color/button_background" />
+        </com.google.android.material.card.MaterialCardView>
 
-                app:cardBackgroundColor="@color/primary"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="5dp"
-                app:contentPadding="15dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                tools:layout_editor_absoluteX="15dp">
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cvBottom"
+            style="@style/Widget.Material3.CardView.Filled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="15dp"
+            android:clickable="true"
+            android:focusable="true"
+
+            app:cardBackgroundColor="@color/primary"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="5dp"
+            app:contentPadding="15dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:layout_editor_absoluteX="15dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:visibility="@{isRouting?View.GONE:View.VISIBLE}"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/origin"
+                    android:textSize="14sp" />
 
                 <LinearLayout
+                    android:id="@+id/llOriginLocation"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical"
-                    android:visibility="@{isRouting?View.GONE:View.VISIBLE}"
-                    tools:visibility="gone">
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/round_4_secondary"
+                    android:gravity="center"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:id="@+id/btnClearOriginLocation"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:alpha="0.7"
+                        android:animateLayoutChanges="true"
+                        android:src="@drawable/close_square"
+                        android:visibility="@{isOriginFilled?View.VISIBLE:View.GONE}"
+                        app:tint="@color/red" />
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:alpha="0.5"
+                        android:animateLayoutChanges="true"
+                        android:src="@drawable/ic_search_linear"
+                        android:visibility="@{isOriginFilled?View.GONE:View.VISIBLE}"
+                        app:tint="@color/black" />
 
                     <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/origin"
-                        android:textSize="14sp" />
-
-                    <LinearLayout
-                        android:id="@+id/llOriginLocation"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:layout_marginTop="5dp"
+                        android:id="@+id/tvOriginLocation"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:background="@drawable/round_4_secondary"
-                        android:gravity="center"
-                        android:padding="10dp">
-
-                        <ImageView
-                            android:id="@+id/btnClearOriginLocation"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:alpha="0.7"
-                            android:animateLayoutChanges="true"
-                            android:src="@drawable/close_square"
-                            android:visibility="@{isOriginFilled?View.VISIBLE:View.GONE}"
-                            app:tint="@color/red" />
-
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:alpha="0.5"
-                            android:animateLayoutChanges="true"
-                            android:src="@drawable/ic_search_linear"
-                            android:visibility="@{isOriginFilled?View.GONE:View.VISIBLE}"
-                            app:tint="@color/black" />
-
-                        <TextView
-                            android:id="@+id/tvOriginLocation"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:hint="@string/search_on_map"
-                            android:text="@{origin.addressOrLatLngString}"
-                            android:textAlignment="viewEnd"
-                            android:textSize="12sp" />
+                        android:hint="@string/search_on_map"
+                        android:text="@{origin.addressOrLatLngString}"
+                        android:textAlignment="viewEnd"
+                        android:textSize="12sp" />
 
 
-                    </LinearLayout>
-
-                    <TextView
-
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:text="@string/destination"
-                        android:textSize="14sp" />
-
-                    <LinearLayout
-                        android:id="@+id/llDestinationLocation"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:layout_marginTop="5dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/round_4_secondary"
-                        android:gravity="center"
-                        android:padding="10dp">
-
-                        <ImageView
-                            android:id="@+id/btnClearDestinationLocation"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:alpha="0.7"
-                            android:animateLayoutChanges="true"
-                            android:src="@drawable/close_square"
-                            android:visibility="@{isDestinationFilled?View.VISIBLE:View.GONE}"
-                            app:tint="@color/red" />
-
-                        <ImageView
-                            visibility="@{isDestinationFilled?View.GONE:View.VISIBLE}"
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:alpha="0.5"
-                            android:animateLayoutChanges="true"
-                            android:src="@drawable/ic_search_linear"
-
-                            app:tint="@color/black" />
-
-                        <TextView
-                            android:id="@+id/tvDestinationLocation"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:hint="@string/search_on_map"
-                            android:text="@{destination.addressOrLatLngString}"
-                            android:textAlignment="viewEnd"
-                            android:textSize="12sp" />
-
-
-                    </LinearLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSearchDriver"
-                        android:layout_width="match_parent"
-                        android:layout_height="55dp"
-                        android:layout_marginTop="25dp"
-                        android:text="@string/search_for_driver"
-                        android:textColor="@color/just_white"
-                        android:textFontWeight="700"
-                        android:visibility="@{routingInProgress?View.GONE:View.VISIBLE}"
-                        app:backgroundTint="@color/button_background"
-                        app:cornerRadius="10dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:layout_width="match_parent"
-                        android:layout_height="55dp"
-                        android:layout_marginTop="25dp"
-                        android:alpha="0.85"
-                        android:clickable="false"
-                        android:focusable="false"
-                        android:text="@string/routing_in_progress"
-                        android:textColor="@color/just_white"
-                        android:textFontWeight="700"
-                        android:visibility="@{routingInProgress?View.VISIBLE:View.GONE}"
-                        app:backgroundTint="@color/button_background"
-                        app:cornerRadius="10dp" />
                 </LinearLayout>
+
+                <TextView
+
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/destination"
+                    android:textSize="14sp" />
+
+                <LinearLayout
+                    android:id="@+id/llDestinationLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="5dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/round_4_secondary"
+                    android:gravity="center"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:id="@+id/btnClearDestinationLocation"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:alpha="0.7"
+                        android:animateLayoutChanges="true"
+                        android:src="@drawable/close_square"
+                        android:visibility="@{isDestinationFilled?View.VISIBLE:View.GONE}"
+                        app:tint="@color/red" />
+
+                    <ImageView
+                        visibility="@{isDestinationFilled?View.GONE:View.VISIBLE}"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:alpha="0.5"
+                        android:animateLayoutChanges="true"
+                        android:src="@drawable/ic_search_linear"
+
+                        app:tint="@color/black" />
+
+                    <TextView
+                        android:id="@+id/tvDestinationLocation"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:hint="@string/search_on_map"
+                        android:text="@{destination.addressOrLatLngString}"
+                        android:textAlignment="viewEnd"
+                        android:textSize="12sp" />
+
+
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSearchDriver"
+                    android:layout_width="match_parent"
+                    android:layout_height="55dp"
+                    android:layout_marginTop="25dp"
+                    android:text="@string/search_for_driver"
+                    android:textColor="@color/just_white"
+                    android:textFontWeight="700"
+                    android:visibility="@{routingInProgress?View.GONE:View.VISIBLE}"
+                    app:backgroundTint="@color/button_background"
+                    app:cornerRadius="10dp" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="25dp"
+                    android:alpha="0.85"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:visibility="@{routingInProgress?View.VISIBLE:View.GONE}"
+                    app:cardBackgroundColor="@color/button_background"
+                    app:cornerRadius="10dp">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center">
+
+                        <ProgressBar
+                            android:layout_width="30dp"
+                            android:layout_height="30dp"
+                            android:layout_gravity="center"
+                            android:layout_marginHorizontal="5dp"
+                            android:indeterminate="true"
+                            android:indeterminateTint="@color/white"
+                            android:padding="5dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:text="@string/routing_in_progress"
+                            android:textColor="@color/just_white"
+                            android:textFontWeight="700" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:animateLayoutChanges="true"
+                android:orientation="vertical"
+                android:visibility="@{isRouting?View.VISIBLE:View.GONE}"
+                tools:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:animateLayoutChanges="true"
-                    android:orientation="vertical"
-                    android:visibility="@{isRouting?View.VISIBLE:View.GONE}"
-                    tools:visibility="visible">
+                    android:layout_gravity="center"
+                    android:gravity="center">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <com.google.android.material.card.MaterialCardView
+                        style="@style/Widget.Material3.CardView.Outlined"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:gravity="center">
+                        app:cardBackgroundColor="@android:color/transparent"
+                        app:cardCornerRadius="8dp"
+                        app:strokeColor="@color/black"
+                        app:strokeWidth="1dp">
 
-                        <com.google.android.material.card.MaterialCardView
-                            style="@style/Widget.Material3.CardView.Outlined"
+                        <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            app:cardBackgroundColor="@android:color/transparent"
-                            app:cardCornerRadius="8dp"
-                            app:strokeColor="@color/black"
-                            app:strokeWidth="1dp">
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="2dp">
+
+                            <TextView
+                                android:id="@+id/tvDriverPlateNumber"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:paddingHorizontal="4dp"
+                                android:textFontWeight="500"
+                                android:textSize="14sp"
+                                tools:text="12 b 123" />
+
+                            <View
+                                android:layout_width="2dp"
+                                android:layout_height="match_parent"
+                                android:layout_marginHorizontal="4dp"
+                                android:layout_marginVertical="5dp"
+                                android:background="@color/black" />
 
                             <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_gravity="center"
                                 android:gravity="center"
-                                android:paddingHorizontal="10dp"
-                                android:paddingVertical="2dp">
+                                android:orientation="vertical"
+                                android:paddingHorizontal="4dp">
 
                                 <TextView
-                                    android:id="@+id/tvDriverPlateNumber"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:paddingHorizontal="4dp"
-                                    android:textFontWeight="500"
-                                    android:textSize="14sp"
-                                    tools:text="12 b 123" />
-
-                                <View
-                                    android:layout_width="2dp"
-                                    android:layout_height="match_parent"
-                                    android:layout_marginHorizontal="4dp"
-                                    android:layout_marginVertical="5dp"
-                                    android:background="@color/black" />
-
-                                <LinearLayout
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_gravity="center"
                                     android:gravity="center"
-                                    android:orientation="vertical"
-                                    android:paddingHorizontal="4dp">
+                                    android:text="@string/iran"
+                                    android:textFontWeight="700"
+                                    android:textSize="8sp" />
 
-                                    <TextView
-                                        android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        android:layout_gravity="center"
-                                        android:gravity="center"
-                                        android:text="@string/iran"
-                                        android:textFontWeight="700"
-                                        android:textSize="8sp" />
-
-                                    <TextView
-                                        android:id="@+id/tvDriverPlateCityId"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="0dp"
-                                        android:layout_gravity="center"
-                                        android:layout_weight="1"
-                                        android:gravity="center"
-                                        android:textFontWeight="500"
-                                        android:textSize="14sp"
-                                        tools:text="12" />
-                                </LinearLayout>
+                                <TextView
+                                    android:id="@+id/tvDriverPlateCityId"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="0dp"
+                                    android:layout_gravity="center"
+                                    android:layout_weight="1"
+                                    android:gravity="center"
+                                    android:textFontWeight="500"
+                                    android:textSize="14sp"
+                                    tools:text="12" />
                             </LinearLayout>
+                        </LinearLayout>
 
-                        </com.google.android.material.card.MaterialCardView>
+                    </com.google.android.material.card.MaterialCardView>
 
-                        <LinearLayout
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvDriverName"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
                             android:layout_weight="1"
-                            android:gravity="center"
-                            android:orientation="vertical">
+                            android:gravity="center|start"
+                            android:paddingHorizontal="4dp"
+                            android:textFontWeight="700"
+                            android:textSize="16sp" />
 
+                        <TextView
+                            android:id="@+id/tvDriverCar"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:paddingHorizontal="4dp"
+                            android:textFontWeight="500"
+                            android:textSize="14sp" />
 
-                            <TextView
-                                android:id="@+id/tvDriverCar"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:paddingHorizontal="4dp"
-                                android:textFontWeight="500"
-                                android:textSize="14sp" />
-
-                            <TextView
-                                android:id="@+id/tvDriverName"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="center"
-                                android:layout_weight="1"
-                                android:gravity="center|start"
-                                android:paddingHorizontal="4dp"
-                                android:textFontWeight="700"
-                                android:textSize="16sp" />
-                        </LinearLayout>
-
-
-                        <ImageView
-                            android:layout_width="45dp"
-                            android:layout_height="45dp"
-                            android:padding="5dp"
-                            android:src="@drawable/ic_user_square" />
                     </LinearLayout>
 
 
-                    <androidx.constraintlayout.widget.ConstraintLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:animateLayoutChanges="true"
-                        android:background="@drawable/round_4_transparent_stroke"
-                        android:backgroundTint="@color/button_background"
-                        android:padding="10dp">
-
-                        <TextView
-                            android:id="@+id/tvOrigin"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/round_4_secondary"
-                            android:padding="10dp"
-                            android:text="@{origin.addressOrLatLngString}"
-                            android:textColor="@color/black"
-                            app:layout_constraintBottom_toTopOf="@+id/tvDestination"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent" />
-
-                        <TextView
-                            android:id="@+id/tvDestination"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="5dp"
-                            android:background="@drawable/round_4_secondary"
-
-                            android:padding="10dp"
-                            android:text="@{destination.addressOrLatLngString}"
-                            android:textAlignment="viewEnd"
-                            android:textColor="@color/black"
-                            app:layout_constraintBottom_toBottomOf="parent"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintStart_toEndOf="@+id/ivArrow"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toBottomOf="@+id/tvOrigin" />
-
-                        <ImageView
-                            android:id="@+id/ivArrow"
-                            android:layout_width="30dp"
-                            android:layout_height="30dp"
-
-                            android:padding="5dp"
-                            android:src="@drawable/ic_arrow_down"
-                            app:layout_constraintBottom_toBottomOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintTop_toTopOf="parent"
-                            app:tint="@color/button_background" />
-                    </androidx.constraintlayout.widget.ConstraintLayout>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnCancelRouting"
-                        android:layout_width="match_parent"
-                        android:layout_height="55dp"
-                        android:layout_marginTop="25dp"
-                        android:text="@string/cancel_routing"
-                        android:textColor="@color/just_white"
-                        android:textFontWeight="700"
-                        app:backgroundTint="@color/red"
-                        app:cornerRadius="10dp" />
-
+                    <ImageView
+                        android:layout_width="45dp"
+                        android:layout_height="45dp"
+                        android:padding="5dp"
+                        android:src="@drawable/ic_user_square"
+                        android:tint="@color/black" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-        </org.neshan.mapsdk.MapView>
+
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:animateLayoutChanges="true"
+                    android:background="@drawable/round_4_transparent_stroke"
+                    android:backgroundTint="@color/button_background"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:id="@+id/tvOrigin"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/round_4_secondary"
+                        android:padding="10dp"
+                        android:text="@{origin.addressOrLatLngString}"
+                        android:textColor="@color/black"
+                        app:layout_constraintBottom_toTopOf="@+id/tvDestination"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tvDestination"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:background="@drawable/round_4_secondary"
+
+                        android:padding="10dp"
+                        android:text="@{destination.addressOrLatLngString}"
+                        android:textAlignment="viewEnd"
+                        android:textColor="@color/black"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/ivArrow"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tvOrigin" />
+
+                    <ImageView
+                        android:id="@+id/ivArrow"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+
+                        android:padding="5dp"
+                        android:src="@drawable/ic_arrow_down"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:tint="@color/button_background" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancelRouting"
+                    android:layout_width="match_parent"
+                    android:layout_height="55dp"
+                    android:layout_marginTop="25dp"
+                    android:text="@string/cancel_routing"
+                    android:textColor="@color/just_white"
+                    android:textFontWeight="700"
+                    app:backgroundTint="@color/red"
+                    app:cornerRadius="10dp" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cvTop"
+            style="@style/Widget.Material3.CardView.Filled"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_margin="15dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="@{isRouting?View.VISIBLE:View.GONE}"
+            app:cardBackgroundColor="@color/primary"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="5dp"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:layout_editor_absoluteX="15dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+
+                android:padding="10dp">
+
+                <include
+                    android:id="@+id/stepsItemView"
+                    layout="@layout/steps_item_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rcSteps"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>

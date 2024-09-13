@@ -89,7 +89,8 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.android.compiler)
 
-    implementation (libs.lottie)
+    implementation(libs.lottie)
+
 
 }
 kapt {

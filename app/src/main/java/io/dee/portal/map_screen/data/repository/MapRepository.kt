@@ -6,8 +6,6 @@ import io.dee.portal.map_screen.data.datasource.RoutingRemoteDatasource
 import io.dee.portal.map_screen.view.RoutingState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.neshan.common.model.LatLng
-import org.neshan.common.utils.PolylineEncoding
 
 interface MapRepository {
     suspend fun reverseGeocoding(lat: Double, lng: Double): String
@@ -38,17 +36,10 @@ class MapRepositoryImpl(
                     val routes = res.body()!!.routes
                     if (!routes.isNullOrEmpty()) {
                         val route = routes[0]
-                        val routeOverviewPolylinePoints = route.overviewPolyline?.let {
-                            PolylineEncoding.decode(
-                                it.points
-                            )
-                        } ?: emptyList()
-                        val decodedSteps = route.legs?.getOrNull(0)?.steps?.map {
-                            PolylineEncoding.decode(it.polyline)
-                        } ?: emptyList()
+
                         RoutingState.Success(
-                            routeOverviewPolylinePoints as ArrayList<LatLng>,
-                            decodedSteps as ArrayList
+                            route.overviewPolyline,
+                            route.legs?.getOrNull(0)?.steps ?: emptyList()
                         )
                     } else {
                         RoutingState.Error("Something went wrong")

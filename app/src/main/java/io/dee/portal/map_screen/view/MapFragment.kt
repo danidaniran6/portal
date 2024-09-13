@@ -15,9 +15,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat.getDrawable
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.carto.graphics.Color
 import com.carto.styles.LineStyle
 import com.carto.styles.LineStyleBuilder
@@ -41,11 +44,14 @@ import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.single.PermissionListener
 import dagger.hilt.android.AndroidEntryPoint
 import io.dee.portal.BuildConfig
+import io.dee.portal.R
 import io.dee.portal.data.local.Location
 import io.dee.portal.databinding.FragmentMapBinding
+import io.dee.portal.map_screen.data.dto.Step
 import io.dee.portal.search_driver.view.SearchDriverBottomSheet
 import io.dee.portal.search_screen.view.SearchScreenBottomSheet
 import org.neshan.common.model.LatLng
+import org.neshan.common.utils.PolylineEncoding
 import org.neshan.mapsdk.internal.utils.BitmapUtils
 import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
@@ -53,6 +59,7 @@ import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN
 import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN_NIGHT
 import java.text.DateFormat
 import java.util.Date
+
 
 @AndroidEntryPoint
 class MapFragment : Fragment() {
@@ -63,6 +70,9 @@ class MapFragment : Fragment() {
 
     private lateinit var binding: FragmentMapBinding
     private val viewModel: MapViewModel by viewModels()
+
+    private lateinit var stepsAdapter: StepsAdapter
+
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
 
@@ -83,6 +93,7 @@ class MapFragment : Fragment() {
 
         }
     }
+    private var isStepsOpen = false
 
 
     override fun onCreateView(
@@ -93,9 +104,7 @@ class MapFragment : Fragment() {
         binding.map.cachePath = requireContext().cacheDir
         binding.map.cacheSize = 20
 
-        val systemUiMode =
-            resources.configuration.uiMode and
-                    Configuration.UI_MODE_NIGHT_MASK
+        val systemUiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         binding.map.setMapStyle(
             when (systemUiMode) {
                 Configuration.UI_MODE_NIGHT_YES -> NESHAN_NIGHT
@@ -113,18 +122,48 @@ class MapFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        bindVariables()
         bindObservers()
         bindViews()
     }
 
+    private fun bindVariables() {
+        stepsAdapter = StepsAdapter(onStepSelected = { position ->
+            if (viewModel.routingSteps.value == null) return@StepsAdapter
+            val steps = viewModel.routingSteps.value!!.subList(0, position + 1)
+            val polyline = steps.map { it.polyline }
+            val decodedSteps = java.util.ArrayList<LatLng>()
+            polyline.forEach {
+                decodedSteps.addAll(PolylineEncoding.decode(it))
+            }
+            val onMapPolyline = Polyline(
+                decodedSteps, getStepsLineStyle()
+            )
+            clearRouteSteppedLine()
+            closeSteps()
+            viewModel.onEvent(MapEvents.SetRouteSteppedLine(onMapPolyline))
+            viewModel.onEvent(MapEvents.SetRoutCurrentStep(stepsAdapter.currentList[position]))
+        })
+    }
+
     private fun bindViews() {
         binding.apply {
+            binding.cvTop.setOnClickListener {
+                if (!isStepsOpen) openSteps()
+                else closeSteps()
+            }
+            rcSteps.apply {
+                this.layoutManager = LinearLayoutManager(requireContext())
+                this.adapter = stepsAdapter
+            }
             map.setOnMarkerClickListener {
                 it.showInfoWindow()
                 true
             }
             btnCancelRouting.setOnClickListener {
+                enableButtons()
                 clearRoutingLine()
+                clearRouteSteppedLine()
                 viewModel.onEvent(MapEvents.CancelRouting)
                 binding.isRouting = false
                 viewModel.onEvent(MapEvents.SetOriginLocation(viewModel.originLocation.value))
@@ -192,6 +231,14 @@ class MapFragment : Fragment() {
             viewModel.onEvent(MapEvents.SetRoutePolyline(null))
         }
     }
+
+    private fun clearRouteSteppedLine() {
+        if (viewModel.routeSteppedPolyline.value != null) {
+            binding.map.removePolyline(viewModel.routeSteppedPolyline.value)
+            viewModel.onEvent(MapEvents.SetRouteSteppedLine(null))
+        }
+    }
+
 
     override fun onResume() {
         super.onResume()
@@ -332,6 +379,12 @@ class MapFragment : Fragment() {
                 }
                 mapSetPosition(viewModel.destinationMarker.value != null)
             }
+            routeSteppedPolyline.observe(viewLifecycleOwner) { line ->
+                line?.let {
+                    binding.map.addPolyline(it)
+                }
+                mapSetPosition(false)
+            }
             userLocation.observe(viewLifecycleOwner) {
                 onUpdateUserLocation(it)
             }
@@ -381,13 +434,11 @@ class MapFragment : Fragment() {
                     }
 
                     is RoutingState.Success -> {
-                        val onMapPolyline = Polyline(
-                            state.routeOverviewPolylinePoints, getLineStyle()
-                        )
-                        viewModel.onEvent(MapEvents.SetRoutePolyline(onMapPolyline))
+
                         binding.isRouting = true
                         binding.routingInProgress = false
-                        enableButtons()
+                        viewModel.onEvent(MapEvents.SetRoutingOverView(state.routeOverView))
+                        viewModel.onEvent(MapEvents.SetRoutingSteps(state.routeSteps))
                     }
 
                     is RoutingState.Error -> {
@@ -398,16 +449,66 @@ class MapFragment : Fragment() {
                     }
                 }
             }
+            routingOverView.observe(viewLifecycleOwner) { overView ->
+                overView?.let {
+                    val data = PolylineEncoding.decode(
+                        it.points ?: ""
+                    )
+                    val onMapPolyline = Polyline(
+                        data as java.util.ArrayList<LatLng>, getLineStyle()
+                    )
+                    viewModel.onEvent(MapEvents.SetRoutePolyline(onMapPolyline))
+                }
+            }
+            routingSteps.observe(viewLifecycleOwner) { steps ->
+                val list = steps?.filter { it != steps.firstOrNull() }
+                stepsAdapter.submitList(list) {
+                    binding.rcSteps.scrollToPosition(0)
+                    viewModel.onEvent(MapEvents.SetRoutCurrentStep(list?.firstOrNull()))
+                }
+            }
+            routCurrentStep.observe(viewLifecycleOwner) { step ->
+                binding.stepsItemView.tvStepDistance.text = step?.distance?.text ?: ""
+                binding.stepsItemView.tvStepInstruction.text = step?.instruction
+                val drawable = getDrawable(
+                    requireContext(),
+                    Step.ModifierEnum.getModifier(step?.modifier).icon
+                )
+                binding.stepsItemView.ivStepDirection.setImageDrawable(drawable)
+            }
         }
 
+    }
+
+    private fun closeSteps() {
+        isStepsOpen = false
+        binding.rcSteps.visibility = View.GONE
+
+        val constraintSet = ConstraintSet()
+        constraintSet.clone(binding.constraintLayout2)
+        constraintSet.clear(
+            R.id.cvTop, ConstraintSet.BOTTOM
+        )
+        constraintSet.applyTo(binding.constraintLayout2)
+    }
+
+    private fun openSteps() {
+        isStepsOpen = true
+        val constraintSet = ConstraintSet()
+        constraintSet.clone(binding.constraintLayout2)
+        constraintSet.connect(
+            R.id.cvTop, ConstraintSet.BOTTOM, ConstraintSet.PARENT_ID, ConstraintSet.BOTTOM, 15
+        )
+        constraintSet.applyTo(binding.constraintLayout2)
+        binding.rcSteps.visibility = View.VISIBLE
     }
 
     private fun disableButtons() {
         binding.apply {
             btnClearOriginLocation.isEnabled = false
             btnClearDestinationLocation.isEnabled = false
-            tvOriginLocation.isEnabled = false
-            tvDestinationLocation.isEnabled = false
+            llOriginLocation.isEnabled = false
+            llDestinationLocation.isEnabled = false
         }
     }
 
@@ -415,8 +516,8 @@ class MapFragment : Fragment() {
         binding.apply {
             btnClearOriginLocation.isEnabled = true
             btnClearDestinationLocation.isEnabled = true
-            tvOriginLocation.isEnabled = true
-            tvDestinationLocation.isEnabled = true
+            llOriginLocation.isEnabled = true
+            llDestinationLocation.isEnabled = true
         }
     }
 
@@ -438,7 +539,6 @@ class MapFragment : Fragment() {
 
 
     private fun onUpdateUserLocation(loc: Location?) {
-
         if (loc == null) return
         if (viewModel.userMarker.value != null) {
             binding.map.removeMarker(viewModel.userMarker.value)
@@ -463,6 +563,10 @@ class MapFragment : Fragment() {
             viewModel.onEvent(MapEvents.SetOriginMarker(null))
         }
         binding.isOriginFilled = loc != null
+        if (loc == null) {
+            clearPolyLine()
+        }
+
 //        binding.tvOriginLocation.text = loc?.getAddressOrLatLngString() ?: ""
         binding.origin = loc
         if (loc == null) return
@@ -482,6 +586,9 @@ class MapFragment : Fragment() {
         if (viewModel.destinationMarker.value != null) {
             binding.map.removeMarker(viewModel.destinationMarker.value)
             viewModel.onEvent(MapEvents.SetDestinationMarker(null))
+        }
+        if (loc == null) {
+            clearPolyLine()
         }
         if (loc == null) return
         val location = loc.getLatLng()
@@ -548,6 +655,13 @@ class MapFragment : Fragment() {
     private fun getLineStyle(): LineStyle {
         val lineStyleBuilder = LineStyleBuilder()
         lineStyleBuilder.color = Color(2, 119, 189, 190)
+        lineStyleBuilder.width = 4f
+        return lineStyleBuilder.buildStyle()
+    }
+
+    private fun getStepsLineStyle(): LineStyle {
+        val lineStyleBuilder = LineStyleBuilder()
+        lineStyleBuilder.color = Color(R.color.red)
         lineStyleBuilder.width = 4f
         return lineStyleBuilder.buildStyle()
     }

@@ -6,12 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.dee.portal.data.local.Location
+import io.dee.portal.map_screen.data.dto.OverviewPolyline
+import io.dee.portal.map_screen.data.dto.Step
 import io.dee.portal.map_screen.data.repository.MapRepository
 import io.dee.portal.search_driver.data.dto.Driver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.neshan.common.model.LatLng
 import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
 import javax.inject.Inject
@@ -63,14 +64,31 @@ class MapViewModel @Inject constructor(
                 updateRoutePolyline(event.line)
             }
 
+            is MapEvents.SetRouteSteppedLine -> {
+                updateRouteSteppedPolyline(event.line)
+            }
+
+            is MapEvents.SetRoutCurrentStep -> {
+                updateRoutCurrentStep(event.steps)
+            }
+
             is MapEvents.UpdateDriver -> {
                 updateDriver(event.driver)
             }
 
+            is MapEvents.SetRoutingOverView -> {
+                updateRoutingOverView(event.overview)
+            }
+
+            is MapEvents.SetRoutingSteps -> {
+                updateRoutingSteps(event.steps)
+            }
+
             is MapEvents.CancelRouting -> {
                 updateOriginToDestinationLine(null)
-                updateRoutePolyline(null)
                 updateDestinationLocation(null)
+                updateRoutingOverView(null)
+                updateRoutingSteps(null)
             }
         }
     }
@@ -132,12 +150,36 @@ class MapViewModel @Inject constructor(
         _routePolyline.value = line
     }
 
+    private val _routeSteppedPolyline: MutableLiveData<Polyline?> = MutableLiveData()
+    var routeSteppedPolyline: LiveData<Polyline?> = _routeSteppedPolyline
+    private fun updateRouteSteppedPolyline(line: Polyline?) {
+        _routeSteppedPolyline.value = line
+    }
+
     private val _routingState: MutableLiveData<RoutingState> = MutableLiveData()
     var routingState: LiveData<RoutingState> = _routingState
     private fun getRoute() = viewModelScope.launch {
         _routingState.value = RoutingState.Loading
         val res = repository.getRoute(_originLocation.value!!, _destinationLocation.value!!)
         _routingState.value = res
+    }
+
+    private val _routingOverView: MutableLiveData<OverviewPolyline?> = MutableLiveData()
+    var routingOverView: LiveData<OverviewPolyline?> = _routingOverView
+    private fun updateRoutingOverView(overview: OverviewPolyline?) {
+        _routingOverView.value = overview
+    }
+
+    private val _routingSteps: MutableLiveData<List<Step>?> = MutableLiveData()
+    var routingSteps: LiveData<List<Step>?> = _routingSteps
+    private fun updateRoutingSteps(steps: List<Step>?) {
+        _routingSteps.value = steps
+    }
+
+    private val _routCurrentStep: MutableLiveData<Step?> = MutableLiveData()
+    var routCurrentStep: LiveData<Step?> = _routCurrentStep
+    private fun updateRoutCurrentStep(steps: Step?) {
+        _routCurrentStep.value = steps
     }
 
     private val _driver: MutableLiveData<Driver?> = MutableLiveData()
@@ -150,8 +192,7 @@ class MapViewModel @Inject constructor(
 sealed interface RoutingState {
     data object Loading : RoutingState
     data class Success(
-        val routeOverviewPolylinePoints: ArrayList<LatLng>,
-        val decodedSteps: ArrayList<List<LatLng>>
+        val routeOverView: OverviewPolyline?, val routeSteps: List<Step>
     ) : RoutingState
 
     data class Error(val message: String? = null) : RoutingState
@@ -173,7 +214,12 @@ sealed interface MapEvents {
     data class SetUserMarker(val marker: Marker?) : MapEvents
     data object GetRoute : MapEvents
     data class SetRoutePolyline(val line: Polyline?) : MapEvents
+    data class SetRouteSteppedLine(val line: Polyline?) : MapEvents
     data class UpdateDriver(val driver: Driver?) : MapEvents
+    data class SetRoutingOverView(val overview: OverviewPolyline?) : MapEvents
+    data class SetRoutingSteps(val steps: List<Step>?) : MapEvents
     data object CancelRouting : MapEvents
+    data class SetRoutCurrentStep(val steps: Step?) : MapEvents
+
 
 }

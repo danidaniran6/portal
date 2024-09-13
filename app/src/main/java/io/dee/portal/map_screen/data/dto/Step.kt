@@ -1,6 +1,7 @@
 package io.dee.portal.map_screen.data.dto
 
 import com.google.gson.annotations.SerializedName
+import io.dee.portal.R
 
 data class Step(
     @SerializedName("bearing_after")
@@ -14,4 +15,22 @@ data class Step(
     @SerializedName("start_location")
     val startLocation: List<Double>? = listOf(),
     val type: String? = ""
-)
+) {
+    enum class ModifierEnum(val value: String, val icon: Int) {
+        RIGHT("right", R.drawable.ic_arrow_right),
+        SLIGHT_RIGHT("slight_right", R.drawable.ic_arrow_right),
+        SHARP_RIGHT("sharp_right", R.drawable.ic_arrow_right),
+        LEFT("left", R.drawable.ic_arrow_left),
+        SLIGHT_LEFT("slight_left", R.drawable.ic_arrow_left),
+        SHARP_LEFT("sharp_left", R.drawable.ic_arrow_left),
+        UTURN("u_turn", R.drawable.ic_arrow_down),
+        STRAIGHT("straight", R.drawable.ic_arrow_up);
+
+        companion object {
+            fun getModifier(modifier: String?): ModifierEnum {
+                return entries.find { it.value == modifier } ?: ModifierEnum.STRAIGHT
+            }
+        }
+    }
+
+}

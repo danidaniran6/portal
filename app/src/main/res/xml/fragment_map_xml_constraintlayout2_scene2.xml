@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MotionScene xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:motion="http://schemas.android.com/apk/res-auto">
+
+    <Transition
+        motion:constraintSetEnd="@+id/end_to_fill"
+        motion:constraintSetStart="@id/start_to_fill"
+        motion:duration="1000">
+        <KeyFrameSet></KeyFrameSet>
+    </Transition>
+
+    <ConstraintSet android:id="@+id/start_to_fill">
+        <Constraint
+            android:id="@+id/cvTop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+             />
+    </ConstraintSet>
+
+    <ConstraintSet android:id="@+id/end_to_fill">
+        <Constraint
+            android:id="@+id/cvTop"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            motion:layout_constraintBottom_toBottomOf="parent" />
+    </ConstraintSet>
+</MotionScene>
