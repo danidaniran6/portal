@@ -9,11 +9,11 @@
 
         <variable
             name="origin"
-            type="io.dee.portal.data.local.Location" />
+            type="io.dee.portal.core.data.local.Location" />
 
         <variable
             name="destination"
-            type="io.dee.portal.data.local.Location" />
+            type="io.dee.portal.core.data.local.Location" />
 
         <variable
             name="isOriginFilled"

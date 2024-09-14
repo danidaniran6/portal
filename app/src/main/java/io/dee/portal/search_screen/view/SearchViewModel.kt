@@ -3,9 +3,9 @@ package io.dee.portal.search_screen.view
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.dee.portal.data.db.entity.LocationData
-import io.dee.portal.data.local.Location
-import io.dee.portal.search_screen.data.SearchRepository
+import io.dee.portal.core.data.db.entity.LocationData
+import io.dee.portal.core.data.local.Location
+import io.dee.portal.search_screen.data.repository.SearchRepository
 import io.dee.portal.search_screen.data.SearchUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

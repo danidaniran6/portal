@@ -1,6 +1,6 @@
 package io.dee.portal.search_screen.data
 
-import io.dee.portal.data.local.Location
+import io.dee.portal.core.data.local.Location
 
 data class SearchState(
     val isLoading: Boolean = false,

@@ -45,7 +45,7 @@ import com.karumi.dexter.listener.single.PermissionListener
 import dagger.hilt.android.AndroidEntryPoint
 import io.dee.portal.BuildConfig
 import io.dee.portal.R
-import io.dee.portal.data.local.Location
+import io.dee.portal.core.data.local.Location
 import io.dee.portal.databinding.FragmentMapBinding
 import io.dee.portal.map_screen.data.dto.Step
 import io.dee.portal.search_driver.view.SearchDriverBottomSheet
@@ -57,8 +57,6 @@ import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
 import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN
 import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN_NIGHT
-import java.text.DateFormat
-import java.util.Date
 
 
 @AndroidEntryPoint
@@ -72,28 +70,23 @@ class MapFragment : Fragment() {
     private val viewModel: MapViewModel by viewModels()
 
     private lateinit var stepsAdapter: StepsAdapter
+    private var isStepsOpen = false
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-
-
     private lateinit var settingsClient: SettingsClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationSettingsRequest: LocationSettingsRequest
-    private var lastUpdateTime: String? = null
     private var mRequestingLocationUpdates: Boolean? = null
     private var shouldMoveCameraToUserLocation: Boolean = true
-
     private var locationCallback: LocationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             super.onLocationResult(locationResult)
             locationResult.lastLocation?.let {
                 viewModel.onEvent(MapEvents.SetUserLocation(Location(it)))
-                lastUpdateTime = DateFormat.getTimeInstance().format(Date())
             }
 
         }
     }
-    private var isStepsOpen = false
 
 
     override fun onCreateView(
@@ -103,15 +96,6 @@ class MapFragment : Fragment() {
         binding.map.setZoom(15f, 0.25f)
         binding.map.cachePath = requireContext().cacheDir
         binding.map.cacheSize = 20
-
-        val systemUiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        binding.map.setMapStyle(
-            when (systemUiMode) {
-                Configuration.UI_MODE_NIGHT_YES -> NESHAN_NIGHT
-                else -> NESHAN
-            }
-        )
-
         return binding.root
     }
 
@@ -242,13 +226,20 @@ class MapFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+
+        val systemUiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        binding.map.setMapStyle(
+            when (systemUiMode) {
+                Configuration.UI_MODE_NIGHT_YES -> NESHAN_NIGHT
+                else -> NESHAN
+            }
+        )
         startLocationUpdates()
     }
 
     override fun onStart() {
         super.onStart()
         bindFused()
-
     }
 
     private fun startReceivingLocationUpdates() {
@@ -263,8 +254,6 @@ class MapFragment : Fragment() {
 
                 override fun onPermissionDenied(response: PermissionDeniedResponse) {
                     if (response.isPermanentlyDenied) {
-                        // open device settings when the permission is
-                        // denied permanently
                         openSettings()
                     }
                 }
@@ -364,13 +353,16 @@ class MapFragment : Fragment() {
 
     fun bindObservers() {
         viewModel.apply {
-
             originToDestinationLine.observe(viewLifecycleOwner) { line ->
                 line?.let {
                     binding.map.addPolyline(it)
                     viewModel.originLocation.value?.let { origin ->
                         binding.map.moveCamera(origin.getLatLng(), .5f)
                     }
+                }
+                binding.apply {
+                    btnSearchDriver.alpha = if (line == null) 0.15f else 1f
+                    btnSearchDriver.isEnabled = line != null
                 }
             }
             routePolyline.observe(viewLifecycleOwner) { line ->
@@ -430,11 +422,10 @@ class MapFragment : Fragment() {
                     is RoutingState.Loading -> {
                         binding.routingInProgress = true
                         disableButtons()
-                        clearPolyLine()
                     }
 
                     is RoutingState.Success -> {
-
+                        clearPolyLine()
                         binding.isRouting = true
                         binding.routingInProgress = false
                         viewModel.onEvent(MapEvents.SetRoutingOverView(state.routeOverView))
@@ -494,6 +485,8 @@ class MapFragment : Fragment() {
 
     private fun openSteps() {
         isStepsOpen = true
+        clearRouteSteppedLine()
+        viewModel.onEvent(MapEvents.SetRoutCurrentStep(viewModel.routingSteps.value?.firstOrNull()))
         val constraintSet = ConstraintSet()
         constraintSet.clone(binding.constraintLayout2)
         constraintSet.connect(

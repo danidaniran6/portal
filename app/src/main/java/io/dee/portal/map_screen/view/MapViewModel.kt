@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.dee.portal.data.local.Location
+import io.dee.portal.core.data.local.Location
 import io.dee.portal.map_screen.data.dto.OverviewPolyline
 import io.dee.portal.map_screen.data.dto.Step
 import io.dee.portal.map_screen.data.repository.MapRepository
@@ -138,7 +138,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    private val _originToDestinationLine: MutableLiveData<Polyline?> = MutableLiveData()
+    private val _originToDestinationLine: MutableLiveData<Polyline?> = MutableLiveData(null)
     var originToDestinationLine: LiveData<Polyline?> = _originToDestinationLine
     private fun updateOriginToDestinationLine(line: Polyline?) {
         _originToDestinationLine.value = line
@@ -160,7 +160,7 @@ class MapViewModel @Inject constructor(
     var routingState: LiveData<RoutingState> = _routingState
     private fun getRoute() = viewModelScope.launch {
         _routingState.value = RoutingState.Loading
-        val res = repository.getRoute(_originLocation.value!!, _destinationLocation.value!!)
+        val res = repository.getRoute(_originLocation.value, _destinationLocation.value)
         _routingState.value = res
     }
 

@@ -1,7 +1,7 @@
 package io.dee.portal.map_screen.data.dto
 
 import com.google.gson.annotations.SerializedName
-import io.dee.portal.data.dto.GeneralResponse
+import io.dee.portal.core.data.dto.GeneralResponse
 
 data class ReverseGeocodingResponse(
     val city: String? = "",

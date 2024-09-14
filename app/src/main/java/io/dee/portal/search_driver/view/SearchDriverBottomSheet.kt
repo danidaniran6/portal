@@ -11,7 +11,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import io.dee.portal.core.base.BaseBottomSheet
+import io.dee.portal.core.view.base.BaseBottomSheet
 import io.dee.portal.databinding.BottomSheetSearchDriverBinding
 import io.dee.portal.search_driver.data.dto.Driver
 import kotlinx.coroutines.launch

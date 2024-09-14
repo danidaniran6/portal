@@ -1,6 +1,6 @@
 package io.dee.portal.map_screen.data.repository
 
-import io.dee.portal.data.local.Location
+import io.dee.portal.core.data.local.Location
 import io.dee.portal.map_screen.data.datasource.ReverseGeoCodingDatasource
 import io.dee.portal.map_screen.data.datasource.RoutingRemoteDatasource
 import io.dee.portal.map_screen.view.RoutingState
@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 
 interface MapRepository {
     suspend fun reverseGeocoding(lat: Double, lng: Double): String
-    suspend fun getRoute(origin: Location, destination: Location): RoutingState
+    suspend fun getRoute(origin: Location?, destination: Location?): RoutingState
 }
 
 class MapRepositoryImpl(
@@ -28,8 +28,9 @@ class MapRepositoryImpl(
         }
     }
 
-    override suspend fun getRoute(origin: Location, destination: Location): RoutingState {
+    override suspend fun getRoute(origin: Location?, destination: Location?): RoutingState {
         return withContext(Dispatchers.IO) {
+            if (origin == null || destination == null) return@withContext RoutingState.Error("Origin or destination is not selected")
             try {
                 val res = routingRemoteDatasource.getRoute(origin, destination)
                 if (res.isSuccessful && res.body() != null) {

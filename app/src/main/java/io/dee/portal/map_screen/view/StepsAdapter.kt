@@ -7,7 +7,6 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import io.dee.portal.R
 import io.dee.portal.databinding.StepsItemViewBinding
 import io.dee.portal.map_screen.data.dto.Step
 
@@ -18,7 +17,6 @@ class StepsAdapter(private val onStepSelected: (position: Int) -> Unit) :
         init {
             binding.root.setOnClickListener {
                 if (adapterPosition != RecyclerView.NO_POSITION) {
-
                     onStepSelected(adapterPosition)
                 }
             }

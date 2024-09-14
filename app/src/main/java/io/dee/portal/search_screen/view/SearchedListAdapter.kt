@@ -5,7 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import io.dee.portal.data.local.Location
+import io.dee.portal.core.data.local.Location
 import io.dee.portal.databinding.SearchListItemViewBinding
 
 class SearchedListAdapter(

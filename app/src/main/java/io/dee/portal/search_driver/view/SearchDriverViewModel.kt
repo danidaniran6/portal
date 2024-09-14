@@ -3,7 +3,7 @@ package io.dee.portal.search_driver.view
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.dee.portal.search_driver.data.SearchDriverRepository
+import io.dee.portal.search_driver.data.repository.SearchDriverRepository
 import io.dee.portal.search_driver.data.dto.Driver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
