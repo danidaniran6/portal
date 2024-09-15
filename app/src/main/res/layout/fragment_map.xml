@@ -134,9 +134,10 @@
                     <TextView
                         android:id="@+id/tvOriginLocation"
                         android:layout_width="0dp"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:hint="@string/search_on_map"
+                        android:padding="5dp"
                         android:text="@{origin.addressOrLatLngString}"
                         android:textAlignment="viewEnd"
                         android:textSize="12sp" />
@@ -186,9 +187,10 @@
                     <TextView
                         android:id="@+id/tvDestinationLocation"
                         android:layout_width="0dp"
-                        android:layout_height="match_parent"
+                        android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:hint="@string/search_on_map"
+                        android:padding="5dp"
                         android:text="@{destination.addressOrLatLngString}"
                         android:textAlignment="viewEnd"
                         android:textSize="12sp" />
