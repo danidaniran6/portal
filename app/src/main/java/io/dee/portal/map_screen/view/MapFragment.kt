@@ -18,8 +18,10 @@ import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat.getDrawable
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.carto.graphics.Color
 import com.carto.styles.LineStyle
@@ -46,10 +48,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.dee.portal.BuildConfig
 import io.dee.portal.R
 import io.dee.portal.core.data.local.Location
+import io.dee.portal.core.view.base.BaseFragment
 import io.dee.portal.databinding.FragmentMapBinding
 import io.dee.portal.map_screen.data.dto.Step
 import io.dee.portal.search_driver.view.SearchDriverBottomSheet
 import io.dee.portal.search_screen.view.SearchScreenBottomSheet
+import io.dee.portal.utils.NetworkStatus
+import kotlinx.coroutines.launch
 import org.neshan.common.model.LatLng
 import org.neshan.common.utils.PolylineEncoding
 import org.neshan.mapsdk.internal.utils.BitmapUtils
@@ -60,7 +65,7 @@ import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN_NIGHT
 
 
 @AndroidEntryPoint
-class MapFragment : Fragment() {
+class MapFragment : BaseFragment() {
     private val TAG = MapFragment::class.java.name
     private val REQUEST_CODE = 123
     private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 3000
@@ -111,7 +116,7 @@ class MapFragment : Fragment() {
         bindViews()
     }
 
-    private fun bindVariables() {
+    override fun bindVariables() {
         stepsAdapter = StepsAdapter(onStepSelected = { position ->
             if (viewModel.routingSteps.value == null) return@StepsAdapter
             val steps = viewModel.routingSteps.value!!.subList(0, position + 1)
@@ -130,7 +135,7 @@ class MapFragment : Fragment() {
         })
     }
 
-    private fun bindViews() {
+    override fun bindViews() {
         binding.apply {
             binding.cvTop.setOnClickListener {
                 if (!isStepsOpen) openSteps()
@@ -351,7 +356,17 @@ class MapFragment : Fragment() {
     }
 
 
-    fun bindObservers() {
+    override fun bindObservers() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                mainViewModel.connectivityStatus.collect {
+                    if (it == NetworkStatus.Connected) {
+                        startLocationUpdates()
+
+                    }
+                }
+            }
+        }
         viewModel.apply {
             originToDestinationLine.observe(viewLifecycleOwner) { line ->
                 line?.let {
