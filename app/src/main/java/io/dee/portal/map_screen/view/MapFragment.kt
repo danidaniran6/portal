@@ -111,9 +111,7 @@ class MapFragment : BaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        bindVariables()
-        bindObservers()
-        bindViews()
+
     }
 
     override fun bindVariables() {
