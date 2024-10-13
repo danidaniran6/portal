@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 connectivityUtil.networkStatus.collect {
                     viewModel.setConnectivityStatus(it)
-                    if (it == NetworkStatus.Disconnected) {
+                        if (it == NetworkStatus.Disconnected) {
                         binding.llNoInternet.visibility = View.VISIBLE
                     } else {
                         binding.llNoInternet.visibility = View.GONE

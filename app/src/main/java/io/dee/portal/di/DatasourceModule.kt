@@ -6,6 +6,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.dee.portal.api.PortalService
 import io.dee.portal.core.data.db.dao.LocationDataDao
+import io.dee.portal.map_screen.data.datasource.LocationProviderDatasource
+import io.dee.portal.map_screen.data.datasource.LocationProviderDatasourceImpl
 import io.dee.portal.map_screen.data.datasource.ReverseGeoCodingDatasource
 import io.dee.portal.map_screen.data.datasource.ReverseGeoCodingDatasourceImpl
 import io.dee.portal.map_screen.data.datasource.RoutingRemoteDatasource
@@ -16,6 +18,7 @@ import io.dee.portal.search_screen.data.datasource.SearchLocalDatasource
 import io.dee.portal.search_screen.data.datasource.SearchLocalDatasourceImpl
 import io.dee.portal.search_screen.data.datasource.SearchRemoteDatasource
 import io.dee.portal.search_screen.data.datasource.SearchRemoteDatasourceImpl
+import io.dee.portal.utils.LocationProvider
 import javax.inject.Singleton
 
 @Module
@@ -56,6 +59,13 @@ object DatasourceModule {
         portalService: PortalService
     ): RoutingRemoteDatasource =
         RoutingRemoteDatasourceImpl(portalService)
+
+    @Provides
+    @Singleton
+    fun provideLocationProviderDatasource(
+        locationProvider: LocationProvider
+    ): LocationProviderDatasource =
+        LocationProviderDatasourceImpl(locationProvider)
 
 
 }

@@ -11,11 +11,14 @@ data class Location(
     var title: String = "",
     var from: Type = Type.None
 ) {
-    constructor(location: Location) : this() {
-        this.latitude = location.latitude
-        this.longitude = location.longitude
-        this.title = "موقغیت کنونی"
-        this.address = "موقغیت کنونی"
+    constructor(location: Location?) : this() {
+        location?.let {
+            this.latitude = location.latitude
+            this.longitude = location.longitude
+            this.title = "موقغیت کنونی"
+            this.address = "موقغیت کنونی"
+        }
+
     }
 
     constructor(data: SearchDto.Item?) : this() {

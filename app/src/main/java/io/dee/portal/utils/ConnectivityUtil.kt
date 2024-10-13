@@ -21,7 +21,7 @@ class ConnectivityUtil(
         private const val TAG = "ConnectivityUtil"
     }
 
-    private val _networkStatus = MutableStateFlow<NetworkStatus>(NetworkStatus.Unknown)
+    private val _networkStatus = MutableStateFlow(NetworkStatus.Unknown)
     val networkStatus: Flow<NetworkStatus> = _networkStatus
 
     private val networkRequest = NetworkRequest.Builder()

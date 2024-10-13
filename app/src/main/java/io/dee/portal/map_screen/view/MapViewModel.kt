@@ -10,7 +10,11 @@ import io.dee.portal.map_screen.data.dto.OverviewPolyline
 import io.dee.portal.map_screen.data.dto.Step
 import io.dee.portal.map_screen.data.repository.MapRepository
 import io.dee.portal.search_driver.data.dto.Driver
+import io.dee.portal.utils.LocationProviderState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.neshan.mapsdk.model.Marker
@@ -90,6 +94,14 @@ class MapViewModel @Inject constructor(
                 updateRoutingOverView(null)
                 updateRoutingSteps(null)
             }
+
+            MapEvents.StartLocationUpdates -> {
+                repository.startLocationUpdates()
+            }
+
+            MapEvents.StopLocationUpdates -> {
+                repository.stopLocationUpdates()
+            }
         }
     }
 
@@ -113,13 +125,13 @@ class MapViewModel @Inject constructor(
 
     private val _userLocation: MutableLiveData<Location?> = MutableLiveData()
     var userLocation: LiveData<Location?> = _userLocation
-
-    private fun updateUserLocation(location: Location?) = viewModelScope.launch {
-        withContext(Dispatchers.Main) {
-            _userLocation.value = location
-        }
-
+    private fun updateUserLocation(location: Location?) {
+        _userLocation.value = location
     }
+
+    val userLocationProvider: StateFlow<LocationProviderState?> =
+        repository.getLocation()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
 
     private val _originLocation: MutableLiveData<Location?> = MutableLiveData()
     var originLocation: LiveData<Location?> = _originLocation
@@ -187,6 +199,14 @@ class MapViewModel @Inject constructor(
     private fun updateDriver(driver: Driver?) {
         _driver.value = driver
     }
+
+    private fun startLocationUpdates() {
+        repository.startLocationUpdates()
+    }
+
+    private fun stopLocationUpdates() {
+        repository.stopLocationUpdates()
+    }
 }
 
 sealed interface RoutingState {
@@ -220,6 +240,8 @@ sealed interface MapEvents {
     data class SetRoutingSteps(val steps: List<Step>?) : MapEvents
     data object CancelRouting : MapEvents
     data class SetRoutCurrentStep(val steps: Step?) : MapEvents
+    data object StartLocationUpdates : MapEvents
+    data object StopLocationUpdates : MapEvents
 
 
 }

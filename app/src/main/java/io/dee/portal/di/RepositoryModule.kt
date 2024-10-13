@@ -4,6 +4,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.dee.portal.map_screen.data.datasource.LocationProviderDatasource
 import io.dee.portal.map_screen.data.datasource.ReverseGeoCodingDatasource
 import io.dee.portal.map_screen.data.datasource.RoutingRemoteDatasource
 import io.dee.portal.map_screen.data.repository.MapRepository
@@ -24,9 +25,10 @@ object RepositoryModule {
     @Singleton
     fun provideMapRepository(
         datasource: ReverseGeoCodingDatasource,
-        routingRemoteDatasource: RoutingRemoteDatasource
+        routingRemoteDatasource: RoutingRemoteDatasource,
+        locationProviderDatasource: LocationProviderDatasource
     ): MapRepository {
-        return MapRepositoryImpl(datasource, routingRemoteDatasource)
+        return MapRepositoryImpl(datasource, routingRemoteDatasource, locationProviderDatasource)
     }
 
     @Provides
