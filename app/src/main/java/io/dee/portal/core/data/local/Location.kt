@@ -9,7 +9,8 @@ data class Location(
     var longitude: Double = 0.0,
     var address: String = "",
     var title: String = "",
-    var from: Type = Type.None
+    var from: Type = Type.None,
+    var bearing: Float = 0f
 ) {
     constructor(location: Location?) : this() {
         location?.let {
@@ -17,8 +18,16 @@ data class Location(
             this.longitude = location.longitude
             this.title = "موقغیت کنونی"
             this.address = "موقغیت کنونی"
+            this.bearing = location.bearing
         }
 
+    }
+
+    constructor(location: LatLng?) : this() {
+        location?.let {
+            this.latitude = location.latitude
+            this.longitude = location.longitude
+        }
     }
 
     constructor(data: SearchDto.Item?) : this() {

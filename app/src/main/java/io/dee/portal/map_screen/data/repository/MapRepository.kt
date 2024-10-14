@@ -4,11 +4,13 @@ import io.dee.portal.core.data.local.Location
 import io.dee.portal.map_screen.data.datasource.LocationProviderDatasource
 import io.dee.portal.map_screen.data.datasource.ReverseGeoCodingDatasource
 import io.dee.portal.map_screen.data.datasource.RoutingRemoteDatasource
+import io.dee.portal.map_screen.data.dto.DecodedSteps
 import io.dee.portal.map_screen.view.RoutingState
 import io.dee.portal.utils.LocationProviderState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
+import org.neshan.common.utils.PolylineEncoding
 
 interface MapRepository {
     suspend fun reverseGeocoding(lat: Double, lng: Double): String
@@ -45,10 +47,25 @@ class MapRepositoryImpl(
                     val routes = res.body()!!.routes
                     if (!routes.isNullOrEmpty()) {
                         val route = routes[0]
+                        val overviewData = PolylineEncoding.decode(
+                            route.overviewPolyline?.points ?: ""
+                        )
+                        val steps = route.legs?.getOrNull(0)?.steps
+                        val decodedPolyline = steps?.map {
+                            DecodedSteps(
+                                it.name,
+                                it.distance,
+                                it.duration,
+                                it.instruction,
+                                it.modifier,
+                                PolylineEncoding.decode(it.polyline ?: "")
+                            )
+                        }
+
 
                         RoutingState.Success(
-                            route.overviewPolyline,
-                            route.legs?.getOrNull(0)?.steps ?: emptyList()
+                            overviewData,
+                            decodedPolyline ?: emptyList()
                         )
                     } else {
                         RoutingState.Error("Something went wrong")

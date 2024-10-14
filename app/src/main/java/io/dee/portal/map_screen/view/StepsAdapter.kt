@@ -8,10 +8,10 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import io.dee.portal.databinding.StepsItemViewBinding
-import io.dee.portal.map_screen.data.dto.Step
+import io.dee.portal.map_screen.data.dto.DecodedSteps
 
 class StepsAdapter(private val onStepSelected: (position: Int) -> Unit) :
-    ListAdapter<Step, StepsAdapter.StepViewHolder>(StepDiffAdapter()) {
+    ListAdapter<DecodedSteps, StepsAdapter.StepViewHolder>(StepDiffAdapter()) {
     inner class StepViewHolder(private val binding: StepsItemViewBinding) :
         RecyclerView.ViewHolder(binding.root) {
         init {
@@ -22,7 +22,7 @@ class StepsAdapter(private val onStepSelected: (position: Int) -> Unit) :
             }
         }
 
-        fun bind(step: Step) {
+        fun bind(step: DecodedSteps) {
             binding.apply {
                 tvStepDistance.visibility =
                     if (!step.distance?.text.isNullOrEmpty()) View.VISIBLE else View.GONE
@@ -30,7 +30,7 @@ class StepsAdapter(private val onStepSelected: (position: Int) -> Unit) :
                 tvStepInstruction.text = step.instruction ?: ""
                 val drawable = ContextCompat.getDrawable(
                     itemView.context,
-                    Step.ModifierEnum.getModifier(step.modifier).icon
+                    DecodedSteps.ModifierEnum.getModifier(step.modifier).icon
                 )
                 ivStepDirection.setImageDrawable(drawable)
             }
@@ -50,12 +50,12 @@ class StepsAdapter(private val onStepSelected: (position: Int) -> Unit) :
         holder.bind(currentList[position])
 }
 
-class StepDiffAdapter() : DiffUtil.ItemCallback<Step>() {
-    override fun areItemsTheSame(oldItem: Step, newItem: Step): Boolean {
+class StepDiffAdapter() : DiffUtil.ItemCallback<DecodedSteps>() {
+    override fun areItemsTheSame(oldItem: DecodedSteps, newItem: DecodedSteps): Boolean {
         return newItem.name == oldItem.name
     }
 
-    override fun areContentsTheSame(oldItem: Step, newItem: Step): Boolean {
+    override fun areContentsTheSame(oldItem: DecodedSteps, newItem: DecodedSteps): Boolean {
         return newItem == oldItem
     }
 }

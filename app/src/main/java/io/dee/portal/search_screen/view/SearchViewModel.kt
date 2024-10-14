@@ -21,8 +21,8 @@ class SearchViewModel @Inject constructor(
     private val repository: SearchRepository
 ) : ViewModel() {
     private val _searchState = MutableStateFlow<SearchUiState>(SearchUiState.Loading)
-    val searchState = _searchState.asStateFlow()
-    val localLocationsState =
+
+    private val _localLocationsState =
         repository.getAllLocationsAsFlow().map<List<LocationData>, SearchUiState> { list ->
             val targetList = list.map {
                 Location().apply {
@@ -40,7 +40,7 @@ class SearchViewModel @Inject constructor(
             SearchUiState.Loading
         )
 
-    val uiState = localLocationsState.combine(searchState) { local, search ->
+    val uiState = _localLocationsState.combine(_searchState) { local, search ->
         if (local is SearchUiState.Success && search is SearchUiState.Success) {
             val localList = local.searchedList
             val apiList = search.searchedList

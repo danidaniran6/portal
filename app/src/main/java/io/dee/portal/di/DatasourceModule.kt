@@ -12,8 +12,6 @@ import io.dee.portal.map_screen.data.datasource.ReverseGeoCodingDatasource
 import io.dee.portal.map_screen.data.datasource.ReverseGeoCodingDatasourceImpl
 import io.dee.portal.map_screen.data.datasource.RoutingRemoteDatasource
 import io.dee.portal.map_screen.data.datasource.RoutingRemoteDatasourceImpl
-import io.dee.portal.search_driver.data.datasource.SearchDriverRemoteDatasource
-import io.dee.portal.search_driver.data.datasource.SearchDriverRemoteDatasourceImpl
 import io.dee.portal.search_screen.data.datasource.SearchLocalDatasource
 import io.dee.portal.search_screen.data.datasource.SearchLocalDatasourceImpl
 import io.dee.portal.search_screen.data.datasource.SearchRemoteDatasource
@@ -47,11 +45,6 @@ object DatasourceModule {
     ): SearchLocalDatasource {
         return SearchLocalDatasourceImpl(dao)
     }
-
-    @Provides
-    @Singleton
-    fun providesSearchDriverRemoteDatasource(): SearchDriverRemoteDatasource =
-        SearchDriverRemoteDatasourceImpl()
 
     @Provides
     @Singleton

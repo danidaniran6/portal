@@ -6,17 +6,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.dee.portal.core.data.local.Location
-import io.dee.portal.map_screen.data.dto.OverviewPolyline
-import io.dee.portal.map_screen.data.dto.Step
+import io.dee.portal.map_screen.data.dto.DecodedSteps
 import io.dee.portal.map_screen.data.repository.MapRepository
-import io.dee.portal.search_driver.data.dto.Driver
 import io.dee.portal.utils.LocationProviderState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.neshan.common.model.LatLng
 import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
 import javax.inject.Inject
@@ -25,6 +27,7 @@ import javax.inject.Inject
 class MapViewModel @Inject constructor(
     private val repository: MapRepository
 ) : ViewModel() {
+
 
     fun onEvent(event: MapEvents) {
         when (event) {
@@ -76,9 +79,6 @@ class MapViewModel @Inject constructor(
                 updateRoutCurrentStep(event.steps)
             }
 
-            is MapEvents.UpdateDriver -> {
-                updateDriver(event.driver)
-            }
 
             is MapEvents.SetRoutingOverView -> {
                 updateRoutingOverView(event.overview)
@@ -124,14 +124,13 @@ class MapViewModel @Inject constructor(
     }
 
     private val _userLocation: MutableLiveData<Location?> = MutableLiveData()
-    var userLocation: LiveData<Location?> = _userLocation
+    val userLocation: LiveData<Location?> get() = _userLocation
     private fun updateUserLocation(location: Location?) {
         _userLocation.value = location
     }
 
     val userLocationProvider: StateFlow<LocationProviderState?> =
-        repository.getLocation()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
+        repository.getLocation().stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
 
     private val _originLocation: MutableLiveData<Location?> = MutableLiveData()
     var originLocation: LiveData<Location?> = _originLocation
@@ -176,29 +175,24 @@ class MapViewModel @Inject constructor(
         _routingState.value = res
     }
 
-    private val _routingOverView: MutableLiveData<OverviewPolyline?> = MutableLiveData()
-    var routingOverView: LiveData<OverviewPolyline?> = _routingOverView
-    private fun updateRoutingOverView(overview: OverviewPolyline?) {
+    private val _routingOverView: MutableLiveData<List<LatLng>?> = MutableLiveData()
+    var routingOverView: LiveData<List<LatLng>?> = _routingOverView
+    private fun updateRoutingOverView(overview: List<LatLng>?) {
         _routingOverView.value = overview
     }
 
-    private val _routingSteps: MutableLiveData<List<Step>?> = MutableLiveData()
-    var routingSteps: LiveData<List<Step>?> = _routingSteps
-    private fun updateRoutingSteps(steps: List<Step>?) {
+    private val _routingSteps: MutableLiveData<List<DecodedSteps>?> = MutableLiveData()
+    var routingSteps: LiveData<List<DecodedSteps>?> = _routingSteps
+    private fun updateRoutingSteps(steps: List<DecodedSteps>?) {
         _routingSteps.value = steps
     }
 
-    private val _routCurrentStep: MutableLiveData<Step?> = MutableLiveData()
-    var routCurrentStep: LiveData<Step?> = _routCurrentStep
-    private fun updateRoutCurrentStep(steps: Step?) {
+    private val _routCurrentStep: MutableLiveData<DecodedSteps?> = MutableLiveData()
+    var routCurrentStep: LiveData<DecodedSteps?> = _routCurrentStep
+    private fun updateRoutCurrentStep(steps: DecodedSteps?) {
         _routCurrentStep.value = steps
     }
 
-    private val _driver: MutableLiveData<Driver?> = MutableLiveData()
-    val driver: LiveData<Driver?> = _driver
-    private fun updateDriver(driver: Driver?) {
-        _driver.value = driver
-    }
 
     private fun startLocationUpdates() {
         repository.startLocationUpdates()
@@ -212,7 +206,7 @@ class MapViewModel @Inject constructor(
 sealed interface RoutingState {
     data object Loading : RoutingState
     data class Success(
-        val routeOverView: OverviewPolyline?, val routeSteps: List<Step>
+        val routeOverView: List<LatLng?>?, val routeSteps: List<DecodedSteps>
     ) : RoutingState
 
     data class Error(val message: String? = null) : RoutingState
@@ -235,11 +229,10 @@ sealed interface MapEvents {
     data object GetRoute : MapEvents
     data class SetRoutePolyline(val line: Polyline?) : MapEvents
     data class SetRouteSteppedLine(val line: Polyline?) : MapEvents
-    data class UpdateDriver(val driver: Driver?) : MapEvents
-    data class SetRoutingOverView(val overview: OverviewPolyline?) : MapEvents
-    data class SetRoutingSteps(val steps: List<Step>?) : MapEvents
+    data class SetRoutingOverView(val overview: List<LatLng>?) : MapEvents
+    data class SetRoutingSteps(val steps: List<DecodedSteps>?) : MapEvents
     data object CancelRouting : MapEvents
-    data class SetRoutCurrentStep(val steps: Step?) : MapEvents
+    data class SetRoutCurrentStep(val steps: DecodedSteps?) : MapEvents
     data object StartLocationUpdates : MapEvents
     data object StopLocationUpdates : MapEvents
 

@@ -1,10 +1,15 @@
 package io.dee.portal.map_screen.view
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -21,6 +26,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.carto.graphics.Color
+import com.carto.styles.AnimationStyle
+import com.carto.styles.AnimationStyleBuilder
+import com.carto.styles.AnimationType
 import com.carto.styles.LineStyle
 import com.carto.styles.LineStyleBuilder
 import com.carto.styles.MarkerStyle
@@ -40,19 +48,19 @@ import io.dee.portal.R
 import io.dee.portal.core.data.local.Location
 import io.dee.portal.core.view.base.BaseFragment
 import io.dee.portal.databinding.FragmentMapBinding
-import io.dee.portal.map_screen.data.dto.Step
-import io.dee.portal.search_driver.view.SearchDriverBottomSheet
+import io.dee.portal.map_screen.data.dto.DecodedSteps
 import io.dee.portal.search_screen.view.SearchScreenBottomSheet
 import io.dee.portal.utils.LocationProviderState
 import io.dee.portal.utils.NetworkStatus
 import kotlinx.coroutines.launch
 import org.neshan.common.model.LatLng
-import org.neshan.common.utils.PolylineEncoding
 import org.neshan.mapsdk.internal.utils.BitmapUtils
 import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
 import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN
 import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN_NIGHT
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 
 @AndroidEntryPoint
@@ -66,26 +74,43 @@ class MapFragment : BaseFragment() {
     private var isStepsOpen = false
     private var shouldMoveCameraToUserLocation: Boolean = true
 
+    private lateinit var sensorManager: SensorManager
+    private val mySensorEventListener: SensorEventListener = object : SensorEventListener {
+        override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
+        }
+
+        override fun onSensorChanged(event: SensorEvent) {
+
+
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         binding = FragmentMapBinding.inflate(inflater, container, false)
-        binding.map.setZoom(15f, 0.25f)
+        binding.map.setZoom(15f, 0f)
         binding.map.cachePath = requireContext().cacheDir
         binding.map.cacheSize = 20
+
+
+        binding.map.settings.isMapRotationEnabled = true
+
+
+        sensorManager = requireContext().getSystemService(Context.SENSOR_SERVICE) as SensorManager
         return binding.root
     }
 
     override fun onPause() {
         super.onPause()
         viewModel.onEvent(MapEvents.StopLocationUpdates)
+        sensorManager.unregisterListener(mySensorEventListener)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        Dexter.withContext(requireContext())
+        Dexter.withContext(requireActivity())
             .withPermission(Manifest.permission.ACCESS_FINE_LOCATION)
             .withListener(object : PermissionListener {
                 override fun onPermissionGranted(response: PermissionGrantedResponse?) {
@@ -110,10 +135,11 @@ class MapFragment : BaseFragment() {
         stepsAdapter = StepsAdapter(onStepSelected = { position ->
             if (viewModel.routingSteps.value == null) return@StepsAdapter
             val steps = viewModel.routingSteps.value!!.subList(0, position + 1)
-            val polyline = steps.map { it.polyline }
-            val decodedSteps = java.util.ArrayList<LatLng>()
-            polyline.forEach {
-                decodedSteps.addAll(PolylineEncoding.decode(it))
+            val decodedSteps = java.util.ArrayList<LatLng?>()
+            steps.forEach {
+                it.decodedPolyline?.let {
+                    decodedSteps.addAll(it)
+                }
             }
             val onMapPolyline = Polyline(
                 decodedSteps, getStepsLineStyle()
@@ -139,18 +165,16 @@ class MapFragment : BaseFragment() {
                 it.showInfoWindow()
                 true
             }
-            btnCancelRouting.setOnClickListener {
-                enableButtons()
-                clearRoutingLine()
-                clearRouteSteppedLine()
-                viewModel.onEvent(MapEvents.CancelRouting)
-                binding.isRouting = false
-                viewModel.onEvent(MapEvents.SetOriginLocation(viewModel.originLocation.value))
-            }
+//            btnCancelRouting.setOnClickListener {
+//                enableButtons()
+//                clearRoutingLine()
+//                clearRouteSteppedLine()
+//                viewModel.onEvent(MapEvents.CancelRouting)
+//                binding.isRouting = false
+//                viewModel.onEvent(MapEvents.SetOriginLocation(viewModel.originLocation.value))
+//            }
             btnSearchDriver.setOnClickListener {
-                SearchDriverBottomSheet(onDriverFound = {
-                    viewModel.onEvent(MapEvents.UpdateDriver(it))
-                }).show(childFragmentManager, "")
+                viewModel.onEvent(MapEvents.GetRoute)
             }
             btnMyLocation.setOnClickListener {
                 viewModel.userLocation.value?.let {
@@ -225,6 +249,14 @@ class MapFragment : BaseFragment() {
 
     override fun onResume() {
         super.onResume()
+        sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION)?.also { accelerometer ->
+            sensorManager.registerListener(
+                mySensorEventListener,
+                accelerometer,
+                SensorManager.SENSOR_DELAY_NORMAL,
+                SensorManager.SENSOR_DELAY_UI
+            )
+        }
 
         val systemUiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         binding.map.setMapStyle(
@@ -250,6 +282,7 @@ class MapFragment : BaseFragment() {
 
 
     override fun bindObservers() {
+
         viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 mainViewModel.connectivityStatus.collect {
@@ -277,7 +310,8 @@ class MapFragment : BaseFragment() {
                 line?.let {
                     binding.map.addPolyline(it)
                 }
-                mapSetPosition(viewModel.destinationMarker.value != null)
+
+                mapSetPosition(false)
             }
             routeSteppedPolyline.observe(viewLifecycleOwner) { line ->
                 line?.let {
@@ -290,14 +324,34 @@ class MapFragment : BaseFragment() {
                     binding.btnMyLocation.isEnabled = !it
                     binding.btnMyLocation.alpha = if (it) 0.15f else 1f
                 }
-                onUpdateUserLocation(it)
+                if (binding.isRouting) {
+                    val a = snapToLine(
+                        it!!.getLatLng(),
+                        viewModel.routingOverView.value!!
+                    )
+                    binding.map.moveCamera(a, 0.5f)
+                    onUpdateUserLocation(Location(a))
+                    val currentStep = findCurrentStep(
+                        it!!.getLatLng(),
+                        viewModel.routingSteps.value!!
+                    )
+                    viewModel.routingSteps.value!!.getOrNull(index = currentStep)?.let {
+                        viewModel.onEvent(MapEvents.SetRoutCurrentStep(it))
+                    }
+
+                } else
+                    onUpdateUserLocation(it)
+
+
             }
+
             viewLifecycleOwner.lifecycleScope.launch {
                 repeatOnLifecycle(Lifecycle.State.RESUMED) {
                     userLocationProvider.collect { state ->
                         when (state) {
                             is LocationProviderState.Success -> {
-                                onUpdateUserLocation(state.location)
+                                viewModel.onEvent(MapEvents.SetUserLocation(state.location))
+
                             }
 
                             is LocationProviderState.Error -> {
@@ -366,16 +420,7 @@ class MapFragment : BaseFragment() {
                     binding.map.addMarker(it)
                 }
             }
-            driver.observe(viewLifecycleOwner) { driverInfo ->
-                driverInfo?.let {
-                    viewModel.onEvent(MapEvents.GetRoute)
-                    binding.tvDriverName.text = it.name
-                    binding.tvDriverCar.text = it.car.getCarName()
-                    binding.tvDriverPlateNumber.text = it.car.plateNumber.getPlateNumber()
-                    binding.tvDriverPlateCityId.text = it.car.plateNumber.code
-                }
 
-            }
             routingState.observe(viewLifecycleOwner) { state ->
                 when (state) {
                     is RoutingState.Loading -> {
@@ -387,12 +432,20 @@ class MapFragment : BaseFragment() {
                         clearPolyLine()
                         binding.isRouting = true
                         binding.routingInProgress = false
-                        viewModel.onEvent(MapEvents.SetRoutingOverView(state.routeOverView))
+                        val steps =
+                            state.routeSteps.fold(mutableListOf<LatLng>()) { acc, decodedSteps ->
+                                decodedSteps.decodedPolyline?.let {
+                                    acc.addAll(it)
+                                }
+                                return@fold acc
+                            }
+                        viewModel.onEvent(MapEvents.SetRoutingOverView(steps))
                         viewModel.onEvent(MapEvents.SetRoutingSteps(state.routeSteps))
                     }
 
                     is RoutingState.Error -> {
-                        Toast.makeText(requireContext(), state.message, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), state.message, Toast.LENGTH_SHORT)
+                            .show()
                         binding.isRouting = false
                         binding.routingInProgress = false
                         enableButtons()
@@ -401,12 +454,11 @@ class MapFragment : BaseFragment() {
             }
             routingOverView.observe(viewLifecycleOwner) { overView ->
                 overView?.let {
-                    val data = PolylineEncoding.decode(
-                        it.points ?: ""
-                    )
                     val onMapPolyline = Polyline(
-                        data as java.util.ArrayList<LatLng>, getLineStyle()
+                        it as java.util.ArrayList<LatLng>, getLineStyle()
                     )
+
+
                     viewModel.onEvent(MapEvents.SetRoutePolyline(onMapPolyline))
                 }
             }
@@ -416,14 +468,33 @@ class MapFragment : BaseFragment() {
                     binding.rcSteps.scrollToPosition(0)
                     viewModel.onEvent(MapEvents.SetRoutCurrentStep(list?.firstOrNull()))
                 }
+                steps?.let {
+                    it.firstOrNull()?.let {
+                        val bearing = calculateBearing(
+                            it.decodedPolyline?.first()!!,
+                            it.decodedPolyline.last()!!
+                        )
+                        binding.map.setZoom(20f, 0.5f)
+                        binding.map.setBearing(bearing.toFloat(), 1f)
+                        binding.map.setTilt(0f, 1f)
+                        binding.map.moveCamera(
+                            it.decodedPolyline.first()!!, 0.5f
+                        )
+                    }
+                }
             }
             routCurrentStep.observe(viewLifecycleOwner) { step ->
                 binding.stepsItemView.tvStepDistance.text = step?.distance?.text ?: ""
                 binding.stepsItemView.tvStepInstruction.text = step?.instruction
                 val drawable = getDrawable(
-                    requireContext(), Step.ModifierEnum.getModifier(step?.modifier).icon
+                    requireContext(), DecodedSteps.ModifierEnum.getModifier(step?.modifier).icon
                 )
                 binding.stepsItemView.ivStepDirection.setImageDrawable(drawable)
+                step?.decodedPolyline?.let {
+                    val bearing = calculateBearing(it.first(), it.last())
+                    binding.map.setBearing(bearing.toFloat(), 1f)
+                    binding.map.setTilt(0f, 1f)
+                }
             }
         }
 
@@ -473,19 +544,34 @@ class MapFragment : BaseFragment() {
     }
 
     private fun mapSetPosition(overview: Boolean) {
-        val centerFirstMarkerX = viewModel.originMarker.value!!.latLng.latitude
-        val centerFirstMarkerY = viewModel.originMarker.value!!.latLng.longitude
-        if (overview) {
-            val centerFocalPositionX =
-                (centerFirstMarkerX + viewModel.destinationMarker.value!!.latLng.latitude) / 2
-            val centerFocalPositionY =
-                (centerFirstMarkerY + viewModel.destinationMarker.value!!.latLng.longitude) / 2
-            binding.map.moveCamera(LatLng(centerFocalPositionX, centerFocalPositionY), 0.5f)
-            binding.map.setZoom(14f, 0.5f)
-        } else {
-            binding.map.moveCamera(LatLng(centerFirstMarkerX, centerFirstMarkerY), 0.5f)
-            binding.map.setZoom(14f, 0.5f)
+//        val centerFirstMarkerX = viewModel.originMarker.value!!.latLng.latitude
+//        val centerFirstMarkerY = viewModel.originMarker.value!!.latLng.longitude
+//        if (overview) {
+//            val centerFocalPositionX =
+//                (centerFirstMarkerX + viewModel.destinationMarker.value!!.latLng.latitude) / 2
+//            val centerFocalPositionY =
+//                (centerFirstMarkerY + viewModel.destinationMarker.value!!.latLng.longitude) / 2
+//            binding.map.moveCamera(LatLng(centerFocalPositionX, centerFocalPositionY), 0.5f)
+//        } else {
+//            binding.map.moveCamera(LatLng(centerFirstMarkerX, centerFirstMarkerY), 0.5f)
+//
+//
+//        }
+    }
+
+    private fun calculateBearing(loc1: LatLng, loc2: LatLng): Float {
+        val startLocation = android.location.Location("startLocation").apply {
+            latitude = loc1.latitude
+            longitude = loc1.longitude
         }
+
+        val endLocation = android.location.Location("endLocation").apply {
+            latitude = loc2.latitude
+            longitude = loc2.longitude
+        }
+
+        return 360 - startLocation.bearingTo(endLocation)
+
     }
 
 
@@ -495,14 +581,17 @@ class MapFragment : BaseFragment() {
             binding.map.removeMarker(viewModel.userMarker.value)
             viewModel.onEvent(MapEvents.SetUserMarker(null))
         }
-        val location = LatLng(loc.latitude, loc.longitude)
+        val latLng = loc.getLatLng()
         val userMarkerStyle = buildUserMarkerStyle()
-        viewModel.onEvent(MapEvents.SetUserMarker(Marker(location, userMarkerStyle).apply {
+        viewModel.onEvent(MapEvents.SetUserMarker(Marker(latLng, userMarkerStyle).apply {
             title = "User"
+
         }))
+
+
         if (shouldMoveCameraToUserLocation) {
             binding.map.moveCamera(
-                LatLng(location.latitude, location.longitude), 0.25f
+                LatLng(latLng.latitude, latLng.longitude), 0.25f
             )
             shouldMoveCameraToUserLocation = false
         }
@@ -543,13 +632,24 @@ class MapFragment : BaseFragment() {
         }
         if (loc == null) return
         val location = loc.getLatLng()
+
         val marketStyle = buildDestinationMarkerStyle()
+
         viewModel.onEvent(MapEvents.SetDestinationMarker(Marker(location, marketStyle).apply {
             title = "Destination"
         }))
         binding.map.moveCamera(
             LatLng(location.latitude, location.longitude), 0.25f
         )
+    }
+
+    private fun getAnimationStyle(): AnimationStyle? {
+        val animStBl = AnimationStyleBuilder()
+        animStBl.fadeAnimationType = AnimationType.ANIMATION_TYPE_SMOOTHSTEP
+        animStBl.sizeAnimationType = AnimationType.ANIMATION_TYPE_SPRING
+        animStBl.phaseInDuration = 0.2f
+        animStBl.phaseOutDuration = 0.2f
+        return animStBl.buildStyle()
     }
 
     private fun buildUserMarkerStyle(): MarkerStyle {
@@ -560,6 +660,7 @@ class MapFragment : BaseFragment() {
                 resources, org.neshan.mapsdk.R.drawable.ic_marker
             )
         )
+        style.animationStyle = getAnimationStyle()
 
         return style.buildStyle()
     }
@@ -572,6 +673,7 @@ class MapFragment : BaseFragment() {
                 resources, org.neshan.mapsdk.R.drawable.ic_cluster_marker_blue
             )
         )
+        style.animationStyle = getAnimationStyle()
 
         return style.buildStyle()
     }
@@ -584,6 +686,7 @@ class MapFragment : BaseFragment() {
                 resources, org.neshan.mapsdk.R.drawable.ic_cluster_marker_blue
             )
         )
+        style.animationStyle = getAnimationStyle()
 
         return style.buildStyle()
     }
@@ -607,6 +710,7 @@ class MapFragment : BaseFragment() {
         val lineStyleBuilder = LineStyleBuilder()
         lineStyleBuilder.color = Color(2, 119, 189, 190)
         lineStyleBuilder.width = 4f
+        lineStyleBuilder.stretchFactor = 0f
         return lineStyleBuilder.buildStyle()
     }
 
@@ -614,9 +718,86 @@ class MapFragment : BaseFragment() {
         val lineStyleBuilder = LineStyleBuilder()
         lineStyleBuilder.color = Color(R.color.red)
         lineStyleBuilder.width = 4f
+        lineStyleBuilder.stretchFactor = 0f
         return lineStyleBuilder.buildStyle()
     }
 
+
+    fun snapToLine(location: LatLng, polyline: List<LatLng>): LatLng {
+        var closestPoint: LatLng? = null
+        var minDistance = Double.MAX_VALUE
+
+        for (i in 0 until polyline.size - 1) {
+            val segmentStart = polyline[i]
+            val segmentEnd = polyline[i + 1]
+
+            val projectedPoint = getClosestPointOnSegment(location, segmentStart, segmentEnd)
+            val distance = distanceBetween(location, projectedPoint)
+
+            if (distance < minDistance) {
+                minDistance = distance
+                closestPoint = projectedPoint
+            }
+        }
+
+        return closestPoint ?: location
+    }
+
+    private fun getClosestPointOnSegment(p: LatLng, a: LatLng, b: LatLng): LatLng {
+        val apx = p.latitude - a.latitude
+        val apy = p.longitude - a.longitude
+        val abx = b.latitude - a.latitude
+        val aby = b.longitude - a.longitude
+
+        val ab2 = abx * abx + aby * aby
+        val ap_ab = apx * abx + apy * aby
+        val t = ap_ab / ab2
+
+        val clampT = t.coerceIn(0.0, 1.0)
+
+        return LatLng(
+            a.latitude + clampT * abx,
+            a.longitude + clampT * aby
+        )
+    }
+
+    private fun distanceBetween(a: LatLng, b: LatLng): Double {
+        val latDiff = a.latitude - b.latitude
+        val lngDiff = a.longitude - b.longitude
+        return sqrt(latDiff.pow(2) + lngDiff.pow(2))
+    }
+
+    fun findCurrentStep(
+        currentLocation: LatLng,
+        steps: List<DecodedSteps>,
+        tolerance: Double = 0.0001
+    ): Int {
+        var closestStepIndex = -1
+        var minDistance = Double.MAX_VALUE
+
+        // Loop through each step and its list of LatLng points
+        for (stepIndex in steps.indices) {
+            val polyline = steps[stepIndex].decodedPolyline ?: return -1
+
+            // Find the closest point on this step's polyline to the current location
+            for (i in 0 until polyline.size - 1) {
+                val segmentStart = polyline[i]
+                val segmentEnd = polyline[i + 1]
+
+                val closestPoint =
+                    getClosestPointOnSegment(currentLocation, segmentStart, segmentEnd)
+                val distance = distanceBetween(currentLocation, closestPoint)
+
+                // If this is the closest step, update the closestStepIndex
+                if (distance < minDistance && distance <= tolerance) {
+                    minDistance = distance
+                    closestStepIndex = stepIndex
+                }
+            }
+        }
+
+        return closestStepIndex // Returns the index of the current step
+    }
 
 }
 
