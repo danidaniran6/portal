@@ -10,17 +10,10 @@ import androidx.recyclerview.widget.RecyclerView
 import io.dee.portal.databinding.StepsItemViewBinding
 import io.dee.portal.map_screen.data.dto.DecodedSteps
 
-class StepsAdapter(private val onStepSelected: (position: Int) -> Unit) :
+class StepsAdapter() :
     ListAdapter<DecodedSteps, StepsAdapter.StepViewHolder>(StepDiffAdapter()) {
     inner class StepViewHolder(private val binding: StepsItemViewBinding) :
         RecyclerView.ViewHolder(binding.root) {
-        init {
-            binding.root.setOnClickListener {
-                if (adapterPosition != RecyclerView.NO_POSITION) {
-                    onStepSelected(adapterPosition)
-                }
-            }
-        }
 
         fun bind(step: DecodedSteps) {
             binding.apply {

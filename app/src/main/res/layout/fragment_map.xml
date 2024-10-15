@@ -78,7 +78,6 @@
             android:layout_margin="15dp"
             android:clickable="true"
             android:focusable="true"
-
             app:cardBackgroundColor="@color/primary"
             app:cardCornerRadius="10dp"
             app:cardElevation="5dp"
@@ -92,7 +91,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-
+                android:visibility="@{isRouting?View.GONE:View.VISIBLE}"
                 tools:visibility="visible">
 
                 <TextView
@@ -247,6 +246,79 @@
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:animateLayoutChanges="true"
+                android:orientation="vertical"
+                android:visibility="@{isRouting?View.VISIBLE:View.GONE}"
+                tools:visibility="visible">
+
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:animateLayoutChanges="true"
+                    android:background="@drawable/round_4_transparent_stroke"
+                    android:backgroundTint="@color/button_background"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:id="@+id/tvOrigin"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/round_4_secondary"
+                        android:padding="10dp"
+                        android:text="@{origin.addressOrLatLngString}"
+                        android:textColor="@color/black"
+                        app:layout_constraintBottom_toTopOf="@+id/tvDestination"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/tvDestination"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:background="@drawable/round_4_secondary"
+
+                        android:padding="10dp"
+                        android:text="@{destination.addressOrLatLngString}"
+                        android:textAlignment="viewEnd"
+                        android:textColor="@color/black"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/ivArrow"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tvOrigin" />
+
+                    <ImageView
+                        android:id="@+id/ivArrow"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+
+                        android:padding="5dp"
+                        android:src="@drawable/ic_arrow_down"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:tint="@color/button_background" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancelRouting"
+                    android:layout_width="match_parent"
+                    android:layout_height="55dp"
+                    android:layout_marginTop="25dp"
+                    android:text="@string/cancel_routing"
+                    android:textColor="@color/just_white"
+                    android:textFontWeight="700"
+                    app:backgroundTint="@color/red"
+                    app:cornerRadius="10dp" />
+
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView

@@ -9,12 +9,10 @@ import io.dee.portal.core.data.local.Location
 import io.dee.portal.map_screen.data.dto.DecodedSteps
 import io.dee.portal.map_screen.data.repository.MapRepository
 import io.dee.portal.utils.LocationProviderState
+import io.dee.portal.utils.NavigationUtil
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,6 +32,8 @@ class MapViewModel @Inject constructor(
             is MapEvents.SetUserLocation -> updateUserLocation(event.location)
             is MapEvents.SetOriginLocation -> updateOriginLocation(event.location)
             is MapEvents.SetDestinationLocation -> updateDestinationLocation(event.location)
+            is MapEvents.SetNavigatorLocation -> updateNavigatorLocation(event.location)
+
             is MapEvents.SetOriginDestinationLocation -> {
                 updateOriginLocation(event.origin)
                 updateDestinationLocation(event.destination)
@@ -59,6 +59,10 @@ class MapViewModel @Inject constructor(
                 updateUserMarker(event.marker)
             }
 
+            is MapEvents.SetNavigatorMarker -> {
+                updateNavigatorMarker(event.marker)
+            }
+
             is MapEvents.SetOriginToDestinationLine -> {
                 updateOriginToDestinationLine(event.line)
             }
@@ -71,9 +75,6 @@ class MapViewModel @Inject constructor(
                 updateRoutePolyline(event.line)
             }
 
-            is MapEvents.SetRouteSteppedLine -> {
-                updateRouteSteppedPolyline(event.line)
-            }
 
             is MapEvents.SetRoutCurrentStep -> {
                 updateRoutCurrentStep(event.steps)
@@ -89,10 +90,14 @@ class MapViewModel @Inject constructor(
             }
 
             is MapEvents.CancelRouting -> {
+                _startRouting.value = false
+                updateNavigatorLocation(null)
+                updateOriginLocation(null)
                 updateOriginToDestinationLine(null)
                 updateDestinationLocation(null)
                 updateRoutingOverView(null)
                 updateRoutingSteps(null)
+
             }
 
             MapEvents.StartLocationUpdates -> {
@@ -102,7 +107,26 @@ class MapViewModel @Inject constructor(
             MapEvents.StopLocationUpdates -> {
                 repository.stopLocationUpdates()
             }
+
+            MapEvents.StartRouting -> {
+                updateNavigatorLocation(_userLocation.value)
+                startRouting()
+            }
+
+            MapEvents.FindCurrentStep -> {
+                findCurrentStep()
+            }
+
+            MapEvents.SnapToLine -> {
+                snapToLine()
+            }
         }
+    }
+
+    private val _startRouting: MutableLiveData<Boolean> = MutableLiveData(false)
+    var startRouting: LiveData<Boolean> = _startRouting
+    private fun startRouting() {
+        _startRouting.value = true
     }
 
     private val _userMarker: MutableLiveData<Marker?> = MutableLiveData()
@@ -127,6 +151,19 @@ class MapViewModel @Inject constructor(
     val userLocation: LiveData<Location?> get() = _userLocation
     private fun updateUserLocation(location: Location?) {
         _userLocation.value = location
+    }
+
+
+    private val _navigatorLocation: MutableLiveData<Location?> = MutableLiveData()
+    val navigatorLocation: LiveData<Location?> get() = _navigatorLocation
+    private fun updateNavigatorLocation(location: Location?) {
+        _navigatorLocation.value = location
+    }
+
+    private val _navigatorMarker: MutableLiveData<Marker?> = MutableLiveData()
+    val navigatorMarker: LiveData<Marker?> get() = _navigatorMarker
+    private fun updateNavigatorMarker(marker: Marker?) {
+        _navigatorMarker.value = marker
     }
 
     val userLocationProvider: StateFlow<LocationProviderState?> =
@@ -161,11 +198,6 @@ class MapViewModel @Inject constructor(
         _routePolyline.value = line
     }
 
-    private val _routeSteppedPolyline: MutableLiveData<Polyline?> = MutableLiveData()
-    var routeSteppedPolyline: LiveData<Polyline?> = _routeSteppedPolyline
-    private fun updateRouteSteppedPolyline(line: Polyline?) {
-        _routeSteppedPolyline.value = line
-    }
 
     private val _routingState: MutableLiveData<RoutingState> = MutableLiveData()
     var routingState: LiveData<RoutingState> = _routingState
@@ -194,13 +226,28 @@ class MapViewModel @Inject constructor(
     }
 
 
-    private fun startLocationUpdates() {
-        repository.startLocationUpdates()
+    private fun findCurrentStep() = viewModelScope.launch {
+        if (_navigatorLocation.value == null) return@launch
+        if (_routingSteps.value == null) return@launch
+        val currentStep = NavigationUtil.findCurrentStep(
+            _navigatorLocation.value!!.getLatLng(),
+            _routingSteps.value!!
+        )
+        _routingSteps.value?.getOrNull(currentStep)?.let {
+            updateRoutCurrentStep(it)
+        }
     }
 
-    private fun stopLocationUpdates() {
-        repository.stopLocationUpdates()
+    private fun snapToLine() = viewModelScope.launch {
+        if (_navigatorLocation.value == null) return@launch
+        if (_routCurrentStep.value?.decodedPolyline.isNullOrEmpty()) return@launch
+        val snappedLocation = NavigationUtil.snapToLine(
+            _navigatorLocation.value!!.getLatLng(),
+            _routCurrentStep.value!!.decodedPolyline ?: emptyList()
+        )
+        updateNavigatorLocation(Location(snappedLocation))
     }
+
 }
 
 sealed interface RoutingState {
@@ -216,6 +263,7 @@ sealed interface MapEvents {
     data class SetUserLocation(val location: Location?) : MapEvents
     data class SetOriginLocation(val location: Location?) : MapEvents
     data class SetDestinationLocation(val location: Location?) : MapEvents
+    data class SetNavigatorLocation(val location: Location?) : MapEvents
     data class SetOriginDestinationLocation(val origin: Location?, val destination: Location?) :
         MapEvents
 
@@ -226,15 +274,20 @@ sealed interface MapEvents {
     data class SetOriginMarker(val marker: Marker?) : MapEvents
     data class SetDestinationMarker(val marker: Marker?) : MapEvents
     data class SetUserMarker(val marker: Marker?) : MapEvents
+    data class SetNavigatorMarker(val marker: Marker?) : MapEvents
     data object GetRoute : MapEvents
     data class SetRoutePolyline(val line: Polyline?) : MapEvents
-    data class SetRouteSteppedLine(val line: Polyline?) : MapEvents
     data class SetRoutingOverView(val overview: List<LatLng>?) : MapEvents
     data class SetRoutingSteps(val steps: List<DecodedSteps>?) : MapEvents
     data object CancelRouting : MapEvents
     data class SetRoutCurrentStep(val steps: DecodedSteps?) : MapEvents
     data object StartLocationUpdates : MapEvents
     data object StopLocationUpdates : MapEvents
+
+    data object FindCurrentStep : MapEvents
+    data object SnapToLine : MapEvents
+
+    data object StartRouting : MapEvents
 
 
 }

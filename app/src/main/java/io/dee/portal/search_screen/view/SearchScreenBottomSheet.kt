@@ -8,17 +8,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import io.dee.portal.R
-import io.dee.portal.core.view.base.BaseBottomSheet
 import io.dee.portal.core.data.local.Location
+import io.dee.portal.core.view.base.BaseBottomSheet
 import io.dee.portal.databinding.BottomSheetSearchBinding
 import io.dee.portal.search_screen.data.SearchUiState
-import kotlinx.coroutines.launch
+import io.dee.portal.utils.flowCollect
 import org.neshan.common.model.LatLng
 
 class SearchScreenBottomSheet(
@@ -85,17 +82,13 @@ class SearchScreenBottomSheet(
     }
 
     override fun bindObservers() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.CREATED) {
-                viewModel.uiState.collect { state ->
-                    when (state) {
-                        is SearchUiState.Error -> {}
-                        is SearchUiState.Loading -> {}
-                        is SearchUiState.Success -> {
-                            searchAdapter.submitList(state.searchedList) {
-                                binding.rcSearchResult.smoothScrollToPosition(0)
-                            }
-                        }
+        flowCollect(flow = viewModel.uiState) { state ->
+            when (state) {
+                is SearchUiState.Error -> {}
+                is SearchUiState.Loading -> {}
+                is SearchUiState.Success -> {
+                    searchAdapter.submitList(state.searchedList) {
+                        binding.rcSearchResult.smoothScrollToPosition(0)
                     }
                 }
             }
