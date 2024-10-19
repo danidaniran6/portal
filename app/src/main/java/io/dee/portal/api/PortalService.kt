@@ -35,16 +35,20 @@ interface PortalService {
         @Query("lng") lng: Double
     ): Response<SearchDto>
 
-    @GET("v4/direction/no-traffic")
+    @GET("v4/direction")
     suspend fun fetchRouting(
-        @Query("origin") origin: String, @Query("destination") destination: String
+        @Query("origin") origin: String,
+        @Query("destination") destination: String,
+        @Query("bearing") bearing: Int,
+        @Query("type") mode: String = "car",
+        @Query("alternative") alternative: Boolean = true,
     ): Response<RouteResponse>
 
 
     companion object {
         fun create(context: Context): PortalService {
             val logger =
-                HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
+                HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
 
 
             val client = OkHttpClient.Builder().addInterceptor(logger)

@@ -99,8 +99,6 @@ dependencies {
 
     implementation(libs.lottie)
 
-    implementation(libs.android.maps.utils)
-    implementation("com.google.android.gms:play-services-maps:18.0.2")
 
 }
 kapt {

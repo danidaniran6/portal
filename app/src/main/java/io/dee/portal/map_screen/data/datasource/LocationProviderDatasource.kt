@@ -6,7 +6,8 @@ import io.dee.portal.utils.LocationProviderState
 import kotlinx.coroutines.flow.StateFlow
 
 interface LocationProviderDatasource {
-    fun getLocation(): StateFlow<LocationProviderState>
+    fun getLocationFlow(): StateFlow<LocationProviderState?>
+    fun getLocation(): LocationProviderState
     fun startLocationUpdates()
     fun stopLocationUpdates()
 }
@@ -15,7 +16,7 @@ class LocationProviderDatasourceImpl(
     private val locationProvider: LocationProvider
 ) :
     LocationProviderDatasource {
-    override fun getLocation(): StateFlow<LocationProviderState> {
+    override fun getLocationFlow(): StateFlow<LocationProviderState?> {
         return locationProvider.locationFlow
     }
 
@@ -25,5 +26,9 @@ class LocationProviderDatasourceImpl(
 
     override fun stopLocationUpdates() {
         locationProvider.stopLocationUpdatesInternal()
+    }
+
+    override fun getLocation(): LocationProviderState {
+        return locationProvider.locationFlow.value ?: LocationProviderState.Loading
     }
 }

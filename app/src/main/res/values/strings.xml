@@ -12,4 +12,5 @@
     <string name="routing_in_progress">در حال مسیریابی</string>
     <string name="iran">ابران</string>
     <string name="your_device_is_offline">دستگاه شما به اینترنت دسترسی ندارد</string>
+    <string name="finish_routing">به مقصد رسیدید</string>
 </resources>

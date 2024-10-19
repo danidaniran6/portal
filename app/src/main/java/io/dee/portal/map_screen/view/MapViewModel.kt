@@ -10,13 +10,13 @@ import io.dee.portal.map_screen.data.dto.DecodedSteps
 import io.dee.portal.map_screen.data.repository.MapRepository
 import io.dee.portal.utils.LocationProviderState
 import io.dee.portal.utils.NavigationUtil
+import io.dee.portal.utils.SingleLiveEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.neshan.common.model.LatLng
 import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
 import javax.inject.Inject
@@ -68,7 +68,7 @@ class MapViewModel @Inject constructor(
             }
 
             MapEvents.GetRoute -> {
-                getRoute()
+                fetchRoute()
             }
 
             is MapEvents.SetRoutePolyline -> {
@@ -90,13 +90,7 @@ class MapViewModel @Inject constructor(
             }
 
             is MapEvents.CancelRouting -> {
-                _startRouting.value = false
-                updateNavigatorLocation(null)
-                updateOriginLocation(null)
-                updateOriginToDestinationLine(null)
-                updateDestinationLocation(null)
-                updateRoutingOverView(null)
-                updateRoutingSteps(null)
+                cancelRouting()
 
             }
 
@@ -123,31 +117,51 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    private val _startRouting: MutableLiveData<Boolean> = MutableLiveData(false)
-    var startRouting: LiveData<Boolean> = _startRouting
+    private val _routingStatus: MutableLiveData<RoutingStatus> = MutableLiveData()
+    var routingStatus: LiveData<RoutingStatus> = _routingStatus
     private fun startRouting() {
-        _startRouting.value = true
+        _routingStatus.value = RoutingStatus.Start
     }
 
-    private val _userMarker: MutableLiveData<Marker?> = MutableLiveData()
+    private fun cancelRouting() {
+        _routingStatus.value = RoutingStatus.Cancel
+        updateNavigatorLocation(null)
+        updateOriginLocation(null)
+        updateOriginToDestinationLine(null)
+        updateDestinationLocation(null)
+        updateRoutingOverView(null)
+        updateRoutingSteps(null)
+    }
+
+    private fun finishRouting() {
+        _routingStatus.value = RoutingStatus.Finished
+        updateNavigatorLocation(null)
+        updateOriginLocation(null)
+        updateOriginToDestinationLine(null)
+        updateDestinationLocation(null)
+        updateRoutingOverView(null)
+        updateRoutingSteps(null)
+    }
+
+    private val _userMarker: SingleLiveEvent<Marker?> = SingleLiveEvent()
     var userMarker: LiveData<Marker?> = _userMarker
     private fun updateUserMarker(marker: Marker?) {
         _userMarker.value = marker
     }
 
-    private val _originMarker: MutableLiveData<Marker?> = MutableLiveData()
+    private val _originMarker: SingleLiveEvent<Marker?> = SingleLiveEvent()
     var originMarker: LiveData<Marker?> = _originMarker
     private fun updateOriginMarker(marker: Marker?) {
         _originMarker.value = marker
     }
 
-    private val _destinationMarker: MutableLiveData<Marker?> = MutableLiveData()
+    private val _destinationMarker: SingleLiveEvent<Marker?> = SingleLiveEvent()
     var destinationMarker: LiveData<Marker?> = _destinationMarker
     private fun updateDestinationMarker(marker: Marker?) {
         _destinationMarker.value = marker
     }
 
-    private val _userLocation: MutableLiveData<Location?> = MutableLiveData()
+    private val _userLocation: SingleLiveEvent<Location?> = SingleLiveEvent()
     val userLocation: LiveData<Location?> get() = _userLocation
     private fun updateUserLocation(location: Location?) {
         _userLocation.value = location
@@ -160,14 +174,14 @@ class MapViewModel @Inject constructor(
         _navigatorLocation.value = location
     }
 
-    private val _navigatorMarker: MutableLiveData<Marker?> = MutableLiveData()
+    private val _navigatorMarker: SingleLiveEvent<Marker?> = SingleLiveEvent()
     val navigatorMarker: LiveData<Marker?> get() = _navigatorMarker
     private fun updateNavigatorMarker(marker: Marker?) {
         _navigatorMarker.value = marker
     }
 
-    val userLocationProvider: StateFlow<LocationProviderState?> =
-        repository.getLocation().stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
+    val userLocationProvider: SharedFlow<LocationProviderState?> =
+        repository.getLocationFlow().stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
 
     private val _originLocation: MutableLiveData<Location?> = MutableLiveData()
     var originLocation: LiveData<Location?> = _originLocation
@@ -186,30 +200,30 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    private val _originToDestinationLine: MutableLiveData<Polyline?> = MutableLiveData(null)
+    private val _originToDestinationLine: SingleLiveEvent<Polyline?> = SingleLiveEvent(null)
     var originToDestinationLine: LiveData<Polyline?> = _originToDestinationLine
     private fun updateOriginToDestinationLine(line: Polyline?) {
         _originToDestinationLine.value = line
     }
 
-    private val _routePolyline: MutableLiveData<Polyline?> = MutableLiveData()
+    private val _routePolyline: SingleLiveEvent<Polyline?> = SingleLiveEvent()
     var routePolyline: LiveData<Polyline?> = _routePolyline
     private fun updateRoutePolyline(line: Polyline?) {
         _routePolyline.value = line
     }
 
 
-    private val _routingState: MutableLiveData<RoutingState> = MutableLiveData()
-    var routingState: LiveData<RoutingState> = _routingState
-    private fun getRoute() = viewModelScope.launch {
-        _routingState.value = RoutingState.Loading
+    private val _fetchRoutingState: MutableLiveData<FetchRoutingState> = MutableLiveData()
+    var fetchRoutingState: LiveData<FetchRoutingState> = _fetchRoutingState
+    private fun fetchRoute() = viewModelScope.launch {
+        _fetchRoutingState.value = FetchRoutingState.Loading
         val res = repository.getRoute(_originLocation.value, _destinationLocation.value)
-        _routingState.value = res
+        _fetchRoutingState.value = res
     }
 
-    private val _routingOverView: MutableLiveData<List<LatLng>?> = MutableLiveData()
-    var routingOverView: LiveData<List<LatLng>?> = _routingOverView
-    private fun updateRoutingOverView(overview: List<LatLng>?) {
+    private val _routingOverView: MutableLiveData<List<List<DecodedSteps>>?> = MutableLiveData()
+    var routingOverView: LiveData<List<List<DecodedSteps>>?> = _routingOverView
+    private fun updateRoutingOverView(overview: List<List<DecodedSteps>>?) {
         _routingOverView.value = overview
     }
 
@@ -219,75 +233,68 @@ class MapViewModel @Inject constructor(
         _routingSteps.value = steps
     }
 
-    private val _routCurrentStep: MutableLiveData<DecodedSteps?> = MutableLiveData()
-    var routCurrentStep: LiveData<DecodedSteps?> = _routCurrentStep
+    private val _routeCurrentStep: SingleLiveEvent<DecodedSteps?> = SingleLiveEvent()
+    var routeCurrentStep: LiveData<DecodedSteps?> = _routeCurrentStep
+
     private fun updateRoutCurrentStep(steps: DecodedSteps?) {
-        _routCurrentStep.value = steps
+        _routeCurrentStep.value = steps
     }
 
+    private val _routeNextStep: SingleLiveEvent<DecodedSteps?> = SingleLiveEvent()
+    var routeNextStep: LiveData<DecodedSteps?> = _routeNextStep
+    private fun updateNextStep(steps: DecodedSteps?) {
+        _routeNextStep.value = steps
+    }
 
     private fun findCurrentStep() = viewModelScope.launch {
         if (_navigatorLocation.value == null) return@launch
         if (_routingSteps.value == null) return@launch
-        val currentStep = NavigationUtil.findCurrentStep(
-            _navigatorLocation.value!!.getLatLng(),
-            _routingSteps.value!!
+        val res = NavigationUtil.findCurrentStep(
+            _navigatorLocation.value!!.getLatLng(), _routingSteps.value!!
         )
-        _routingSteps.value?.getOrNull(currentStep)?.let {
-            updateRoutCurrentStep(it)
+        when (res) {
+            is NavigationUtil.CurrentStepState.StepFounded -> {
+                val currentStep = _routingSteps.value?.getOrNull(res.stepIndex)
+                    ?: _routingSteps.value?.firstOrNull()
+                val nextStep = _routingSteps.value?.getOrNull(res.stepIndex + 1)
+                updateRoutCurrentStep(currentStep)
+                updateNextStep(nextStep)
+            }
+
+            is NavigationUtil.CurrentStepState.RouteFinished -> {
+                finishRouting()
+            }
+
+            else -> {}
         }
+
     }
 
     private fun snapToLine() = viewModelScope.launch {
         if (_navigatorLocation.value == null) return@launch
-        if (_routCurrentStep.value?.decodedPolyline.isNullOrEmpty()) return@launch
+        if (_routeCurrentStep.value?.decodedPolyline.isNullOrEmpty()) return@launch
         val snappedLocation = NavigationUtil.snapToLine(
             _navigatorLocation.value!!.getLatLng(),
-            _routCurrentStep.value!!.decodedPolyline ?: emptyList()
+            _routeCurrentStep.value!!.decodedPolyline ?: emptyList()
         )
+
         updateNavigatorLocation(Location(snappedLocation))
     }
 
 }
 
-sealed interface RoutingState {
-    data object Loading : RoutingState
+sealed interface FetchRoutingState {
+    data object Loading : FetchRoutingState
     data class Success(
-        val routeOverView: List<LatLng?>?, val routeSteps: List<DecodedSteps>
-    ) : RoutingState
+        val routeOverView: List<List<DecodedSteps>>, val routeSteps: List<DecodedSteps>
+    ) : FetchRoutingState
 
-    data class Error(val message: String? = null) : RoutingState
+    data class Error(val message: String? = null) : FetchRoutingState
 }
 
-sealed interface MapEvents {
-    data class SetUserLocation(val location: Location?) : MapEvents
-    data class SetOriginLocation(val location: Location?) : MapEvents
-    data class SetDestinationLocation(val location: Location?) : MapEvents
-    data class SetNavigatorLocation(val location: Location?) : MapEvents
-    data class SetOriginDestinationLocation(val origin: Location?, val destination: Location?) :
-        MapEvents
-
-    data class SetOriginToDestinationLine(val line: Polyline?) : MapEvents
-
-    data object ClearOriginLocation : MapEvents
-    data object ClearDestinationLocation : MapEvents
-    data class SetOriginMarker(val marker: Marker?) : MapEvents
-    data class SetDestinationMarker(val marker: Marker?) : MapEvents
-    data class SetUserMarker(val marker: Marker?) : MapEvents
-    data class SetNavigatorMarker(val marker: Marker?) : MapEvents
-    data object GetRoute : MapEvents
-    data class SetRoutePolyline(val line: Polyline?) : MapEvents
-    data class SetRoutingOverView(val overview: List<LatLng>?) : MapEvents
-    data class SetRoutingSteps(val steps: List<DecodedSteps>?) : MapEvents
-    data object CancelRouting : MapEvents
-    data class SetRoutCurrentStep(val steps: DecodedSteps?) : MapEvents
-    data object StartLocationUpdates : MapEvents
-    data object StopLocationUpdates : MapEvents
-
-    data object FindCurrentStep : MapEvents
-    data object SnapToLine : MapEvents
-
-    data object StartRouting : MapEvents
-
-
+sealed interface RoutingStatus {
+    data object Start : RoutingStatus
+    data object Finished : RoutingStatus
+    data object Cancel : RoutingStatus
 }
+

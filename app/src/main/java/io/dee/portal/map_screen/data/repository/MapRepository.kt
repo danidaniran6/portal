@@ -5,7 +5,7 @@ import io.dee.portal.map_screen.data.datasource.LocationProviderDatasource
 import io.dee.portal.map_screen.data.datasource.ReverseGeoCodingDatasource
 import io.dee.portal.map_screen.data.datasource.RoutingRemoteDatasource
 import io.dee.portal.map_screen.data.dto.DecodedSteps
-import io.dee.portal.map_screen.view.RoutingState
+import io.dee.portal.map_screen.view.FetchRoutingState
 import io.dee.portal.utils.LocationProviderState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
@@ -14,9 +14,10 @@ import org.neshan.common.utils.PolylineEncoding
 
 interface MapRepository {
     suspend fun reverseGeocoding(lat: Double, lng: Double): String
-    suspend fun getRoute(origin: Location?, destination: Location?): RoutingState
+    suspend fun getRoute(origin: Location?, destination: Location?): FetchRoutingState
 
-    fun getLocation(): StateFlow<LocationProviderState>
+    fun getLocationFlow(): StateFlow<LocationProviderState?>
+    fun getLocation(): LocationProviderState
     fun startLocationUpdates()
     fun stopLocationUpdates()
 }
@@ -38,49 +39,72 @@ class MapRepositoryImpl(
         }
     }
 
-    override suspend fun getRoute(origin: Location?, destination: Location?): RoutingState {
+    override suspend fun getRoute(origin: Location?, destination: Location?): FetchRoutingState {
         return withContext(Dispatchers.IO) {
-            if (origin == null || destination == null) return@withContext RoutingState.Error("Origin or destination is not selected")
+            if (origin == null || destination == null) return@withContext FetchRoutingState.Error("Origin or destination is not selected")
             try {
                 val res = routingRemoteDatasource.getRoute(origin, destination)
                 if (res.isSuccessful && res.body() != null) {
                     val routes = res.body()!!.routes
                     if (!routes.isNullOrEmpty()) {
-                        val route = routes[0]
-                        val overviewData = PolylineEncoding.decode(
-                            route.overviewPolyline?.points ?: ""
-                        )
-                        val steps = route.legs?.getOrNull(0)?.steps
-                        val decodedPolyline = steps?.map {
-                            DecodedSteps(
-                                it.name,
-                                it.distance,
-                                it.duration,
-                                it.instruction,
-                                it.modifier,
-                                PolylineEncoding.decode(it.polyline ?: "")
-                            )
+
+                        val firstRoute = routes[0]
+                        val overviewData = withContext(Dispatchers.Default) {
+                            routes.fold(mutableListOf<List<DecodedSteps>>()) { acc, route ->
+                                val steps = firstRoute.legs?.getOrNull(0)?.steps
+                                val decodedPolyline =
+                                    steps?.map {
+                                        DecodedSteps(
+                                            it.name,
+                                            it.distance,
+                                            it.duration,
+                                            it.instruction,
+                                            it.modifier,
+                                            PolylineEncoding.decode(it.polyline ?: "")
+                                        )
+                                    }
+                                decodedPolyline?.let {
+                                    acc.add(it)
+                                }
+                                return@fold acc
+                            }
+                        }
+                        val steps = firstRoute.legs?.getOrNull(0)?.steps
+                        val decodedPolyline = withContext(Dispatchers.Default) {
+                            steps?.map {
+                                DecodedSteps(
+                                    it.name,
+                                    it.distance,
+                                    it.duration,
+                                    it.instruction,
+                                    it.modifier,
+                                    PolylineEncoding.decode(it.polyline ?: "")
+                                )
+                            }
                         }
 
-
-                        RoutingState.Success(
+                        FetchRoutingState.Success(
                             overviewData,
                             decodedPolyline ?: emptyList()
                         )
                     } else {
-                        RoutingState.Error("Something went wrong")
+                        FetchRoutingState.Error("Something went wrong")
                     }
                 } else {
-                    RoutingState.Error("Something went wrong")
+                    FetchRoutingState.Error("Something went wrong")
                 }
             } catch (e: Exception) {
-                RoutingState.Error(e.localizedMessage)
+                FetchRoutingState.Error(e.localizedMessage)
             }
 
         }
     }
 
-    override fun getLocation(): StateFlow<LocationProviderState> {
+    override fun getLocationFlow(): StateFlow<LocationProviderState?> {
+        return locationProviderDatasource.getLocationFlow()
+    }
+
+    override fun getLocation(): LocationProviderState {
         return locationProviderDatasource.getLocation()
     }
 
