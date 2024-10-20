@@ -20,4 +20,5 @@ abstract class BaseFragment : Fragment() {
         bindObservers()
 
     }
+
 }

@@ -10,4 +10,6 @@
     <color name="secondary">#f0f0f2</color>
     <color name="red">#E53935</color>
     <color name="button_background">#3F51B5</color>
+    <color name="orange">#FF9800</color>
+    <color name="black_alpha_30">#4D000000</color>
 </resources>

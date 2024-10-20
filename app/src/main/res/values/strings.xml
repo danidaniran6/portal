@@ -4,7 +4,7 @@
     <string name="destination">مقصد</string>
     <string name="search">جستجو</string>
     <string name="user_current_location">موقعیت کنونی</string>
-    <string name="search_for_driver">جستجو راننده</string>
+    <string name="start_routing">بزن بریم</string>
     <string name="search_on_map">جستجو بر روی نقشه</string>
     <string name="press_back_again_to_exit">برای خروچ از برنامه دوبار کلیک کنید</string>
     <string name="trying_to_find_nearest_driver">در حال یاقتن نزدیک ترین راننده به شما</string>
@@ -13,4 +13,9 @@
     <string name="iran">ابران</string>
     <string name="your_device_is_offline">دستگاه شما به اینترنت دسترسی ندارد</string>
     <string name="finish_routing">به مقصد رسیدید</string>
+    <string name="warning">توجه</string>
+    <string name="cancel_routing_warning">ایا از پایان سفر اطمینان دارید؟</string>
+    <string name="dismiss">انصراف</string>
+    <string name="yes">بله</string>
+    <string name="back_to_route">برگشت به مسیر</string>
 </resources>

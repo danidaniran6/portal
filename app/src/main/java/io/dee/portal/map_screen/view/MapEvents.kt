@@ -3,7 +3,6 @@ package io.dee.portal.map_screen.view
 
 import io.dee.portal.core.data.local.Location
 import io.dee.portal.map_screen.data.dto.DecodedSteps
-import org.neshan.common.model.LatLng
 import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
 
@@ -36,6 +35,7 @@ sealed interface MapEvents {
     data object SnapToLine : MapEvents
 
     data object StartRouting : MapEvents
+    data object InProgressRouting : MapEvents
 
 
 }

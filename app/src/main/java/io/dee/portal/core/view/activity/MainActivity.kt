@@ -1,8 +1,11 @@
 package io.dee.portal.core.view.activity
 
+import android.app.PictureInPictureParams
+import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Rational
 import android.view.View
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -60,6 +63,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.navController
@@ -69,7 +73,7 @@ class MainActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 connectivityUtil.networkStatus.collect {
                     viewModel.setConnectivityStatus(it)
-                        if (it == NetworkStatus.Disconnected) {
+                    if (it == NetworkStatus.Disconnected) {
                         binding.llNoInternet.visibility = View.VISIBLE
                     } else {
                         binding.llNoInternet.visibility = View.GONE
@@ -91,4 +95,5 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         connectivityUtil.unregister()
     }
+
 }

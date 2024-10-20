@@ -90,9 +90,14 @@ class MapViewModel @Inject constructor(
             }
 
             is MapEvents.CancelRouting -> {
+                _routingStatus.value = RoutingStatus.Cancel
                 cancelRouting()
-
             }
+
+            is MapEvents.InProgressRouting -> {
+                _routingStatus.value = RoutingStatus.InProgress
+            }
+
 
             MapEvents.StartLocationUpdates -> {
                 repository.startLocationUpdates()
@@ -106,6 +111,7 @@ class MapViewModel @Inject constructor(
                 updateNavigatorLocation(_userLocation.value)
                 startRouting()
             }
+
 
             MapEvents.FindCurrentStep -> {
                 findCurrentStep()
@@ -124,24 +130,16 @@ class MapViewModel @Inject constructor(
     }
 
     private fun cancelRouting() {
-        _routingStatus.value = RoutingStatus.Cancel
         updateNavigatorLocation(null)
         updateOriginLocation(null)
         updateOriginToDestinationLine(null)
         updateDestinationLocation(null)
         updateRoutingOverView(null)
         updateRoutingSteps(null)
+        updateRoutCurrentStep(null)
+        updateNextStep(null)
     }
 
-    private fun finishRouting() {
-        _routingStatus.value = RoutingStatus.Finished
-        updateNavigatorLocation(null)
-        updateOriginLocation(null)
-        updateOriginToDestinationLine(null)
-        updateDestinationLocation(null)
-        updateRoutingOverView(null)
-        updateRoutingSteps(null)
-    }
 
     private val _userMarker: SingleLiveEvent<Marker?> = SingleLiveEvent()
     var userMarker: LiveData<Marker?> = _userMarker
@@ -183,7 +181,7 @@ class MapViewModel @Inject constructor(
     val userLocationProvider: SharedFlow<LocationProviderState?> =
         repository.getLocationFlow().stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
 
-    private val _originLocation: MutableLiveData<Location?> = MutableLiveData()
+    private val _originLocation: SingleLiveEvent<Location?> = SingleLiveEvent()
     var originLocation: LiveData<Location?> = _originLocation
     private fun updateOriginLocation(location: Location?) = viewModelScope.launch {
         withContext(Dispatchers.Main) {
@@ -191,7 +189,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    private val _destinationLocation: MutableLiveData<Location?> = MutableLiveData()
+    private val _destinationLocation: SingleLiveEvent<Location?> = SingleLiveEvent()
     var destinationLocation: LiveData<Location?> = _destinationLocation
 
     private fun updateDestinationLocation(location: Location?) = viewModelScope.launch {
@@ -199,6 +197,7 @@ class MapViewModel @Inject constructor(
             _destinationLocation.value = location
         }
     }
+
 
     private val _originToDestinationLine: SingleLiveEvent<Polyline?> = SingleLiveEvent(null)
     var originToDestinationLine: LiveData<Polyline?> = _originToDestinationLine
@@ -240,7 +239,7 @@ class MapViewModel @Inject constructor(
         _routeCurrentStep.value = steps
     }
 
-    private val _routeNextStep: SingleLiveEvent<DecodedSteps?> = SingleLiveEvent()
+    private val _routeNextStep: SingleLiveEvent<DecodedSteps?> = SingleLiveEvent(null)
     var routeNextStep: LiveData<DecodedSteps?> = _routeNextStep
     private fun updateNextStep(steps: DecodedSteps?) {
         _routeNextStep.value = steps
@@ -262,7 +261,13 @@ class MapViewModel @Inject constructor(
             }
 
             is NavigationUtil.CurrentStepState.RouteFinished -> {
-                finishRouting()
+                _routingStatus.value = RoutingStatus.Finished
+                cancelRouting()
+            }
+
+            is NavigationUtil.CurrentStepState.NeedReroute -> {
+                _originLocation.value = _navigatorLocation.value
+                fetchRoute()
             }
 
             else -> {}
@@ -294,6 +299,7 @@ sealed interface FetchRoutingState {
 
 sealed interface RoutingStatus {
     data object Start : RoutingStatus
+    data object InProgress : RoutingStatus
     data object Finished : RoutingStatus
     data object Cancel : RoutingStatus
 }

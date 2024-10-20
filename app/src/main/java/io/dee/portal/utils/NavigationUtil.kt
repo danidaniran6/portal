@@ -4,8 +4,6 @@ import io.dee.portal.map_screen.data.dto.DecodedSteps
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.neshan.common.model.LatLng
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 object NavigationUtil {
     suspend fun snapToLine(location: LatLng, polyline: List<LatLng>): LatLng {
@@ -27,10 +25,67 @@ object NavigationUtil {
                 }
 
             }
-             closestPoint ?: polyline.firstOrNull() ?: location
+            closestPoint  ?: location
         }
 
     }
+
+
+    suspend fun findCurrentStep(
+        currentLocation: LatLng,
+        steps: List<DecodedSteps>,
+        tolerance: Double = 10.0,
+    ): CurrentStepState {
+        return withContext(Dispatchers.Default) {
+            var closestStepIndex = -1
+            for (stepIndex in steps.indices) {
+                val polyline = steps[stepIndex].decodedPolyline ?: emptyList()
+
+                for (i in 0 until polyline.size - 1) {
+                    val segmentStart = polyline[i]
+                    val segmentEnd = polyline[i + 1]
+                    val closestPoint =
+                        getClosestPointOnSegment(currentLocation, segmentStart, segmentEnd)
+                    val distance = distanceBetween(currentLocation, closestPoint)
+
+                    if (distance <= tolerance) {
+                        closestStepIndex = stepIndex
+                        break
+                    }
+                }
+            }
+            val stepsFinished = isRouteFinished(currentLocation, steps)
+            if (stepsFinished) {
+                CurrentStepState.RouteFinished
+            } else {
+                CurrentStepState.StepFounded(closestStepIndex)
+            }
+        }
+    }
+
+    private fun isRouteFinished(
+        currentLocation: LatLng, steps: List<DecodedSteps>
+    ): Boolean {
+        if (steps.isNotEmpty()) {
+            val lastStep = steps.last()
+            val lastPoint = lastStep.decodedPolyline?.lastOrNull() ?: return false
+            val lastLocation = android.location.Location("").apply {
+                latitude = lastPoint.latitude
+                longitude = lastPoint.longitude
+            }
+            val current = android.location.Location("").apply {
+                latitude = currentLocation.latitude
+                longitude = currentLocation.longitude
+            }
+
+            val distanceToLastPoint = lastLocation.distanceTo(current)
+            if (distanceToLastPoint <= 10) {
+                return true
+            }
+        }
+        return false
+    }
+
 
     private fun getClosestPointOnSegment(p: LatLng, a: LatLng, b: LatLng): LatLng {
         val apx = p.latitude - a.latitude
@@ -50,57 +105,16 @@ object NavigationUtil {
     }
 
     private fun distanceBetween(a: LatLng, b: LatLng): Double {
-        val latDiff = a.latitude - b.latitude
-        val lngDiff = a.longitude - b.longitude
-        return sqrt(latDiff.pow(2) + lngDiff.pow(2))
-    }
-
-    suspend fun findCurrentStep(
-        currentLocation: LatLng, steps: List<DecodedSteps>, tolerance: Double = 0.0001
-    ): CurrentStepState {
-        return withContext(Dispatchers.Default) {
-            var closestStepIndex = -1
-            var minDistance = Double.MAX_VALUE
-
-            for (stepIndex in steps.indices) {
-                val polyline = steps[stepIndex].decodedPolyline ?: emptyList()
-
-                for (i in 0 until polyline.size - 1) {
-                    val segmentStart = polyline[i]
-                    val segmentEnd = polyline[i + 1]
-
-                    val closestPoint =
-                        getClosestPointOnSegment(currentLocation, segmentStart, segmentEnd)
-                    val distance = distanceBetween(currentLocation, closestPoint)
-
-                    if (distance < minDistance && distance <= tolerance) {
-                        minDistance = distance
-                        closestStepIndex = stepIndex
-                    }
-                }
-            }
-            val stepsFinished = isRouteFinished(currentLocation, steps, tolerance)
-            if (stepsFinished) {
-                CurrentStepState.RouteFinished
-            } else {
-                CurrentStepState.StepFounded(closestStepIndex)
-            }
+        val startLocation = android.location.Location("startLocation").apply {
+            latitude = a.latitude
+            longitude = a.longitude
         }
-    }
 
-    private fun isRouteFinished(
-        currentLocation: LatLng, steps: List<DecodedSteps>, tolerance: Double
-    ): Boolean {
-        // Get the last step's last point (destination)
-        if (steps.isNotEmpty()) {
-            val lastStep = steps.last()
-            val lastPoint = lastStep.decodedPolyline?.lastOrNull() ?: return false
-
-            // Check if the current location is within the tolerance distance of the last point
-            val distanceToLastPoint = distanceBetween(currentLocation, lastPoint)
-            return distanceToLastPoint <= tolerance
+        val endLocation = android.location.Location("endLocation").apply {
+            latitude = b.latitude
+            longitude = b.longitude
         }
-        return false
+        return endLocation.distanceTo(startLocation).toDouble()
     }
 
     fun calculateBearing(loc1: LatLng, loc2: LatLng): Float {
@@ -121,6 +135,7 @@ object NavigationUtil {
     sealed interface CurrentStepState {
         data class StepFounded(val stepIndex: Int) : CurrentStepState
         object RouteFinished : CurrentStepState
+        object NeedReroute : CurrentStepState
         object NoStepFound : CurrentStepState
 
 

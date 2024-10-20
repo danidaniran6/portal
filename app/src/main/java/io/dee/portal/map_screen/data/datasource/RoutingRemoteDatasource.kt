@@ -18,7 +18,7 @@ class RoutingRemoteDatasourceImpl(private val service: PortalService) : RoutingR
         return service.fetchRouting(
             origin.getLatLngString(),
             destination.getLatLngString(),
-            origin.bearing.toInt()
+
         )
     }
 }

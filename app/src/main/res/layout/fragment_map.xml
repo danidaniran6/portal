@@ -37,6 +37,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/constraintLayout2"
         android:layout_width="match_parent"
+
         android:layout_height="match_parent">
 
         <org.neshan.mapsdk.MapView
@@ -48,6 +49,41 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cvBackToRoute"
+            style="@style/Widget.Material3.CardView.Filled"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="5dp"
+            android:text="@string/back_to_route"
+            android:textSize="12sp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/button_background"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="5dp"
+            app:layout_constraintBottom_toTopOf="@+id/cvBottom"
+            app:layout_constraintEnd_toEndOf="@+id/cvBottom">
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/pbBackToRoute"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                app:indicatorColor="@color/black_alpha_30"
+                app:trackColor="@color/button_background"
+                app:trackThickness="40dp"
+                tools:progress="50" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:padding="10dp"
+                android:text="@string/back_to_route"
+                android:textColor="@color/just_white"
+                android:textSize="12sp" />
+        </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/btnMyLocation"
@@ -56,6 +92,7 @@
             android:layout_height="40dp"
             android:layout_marginBottom="5dp"
             android:src="@drawable/ic_my_location"
+            android:visibility="@{isRouting?View.GONE:View.VISIBLE}"
             app:cardBackgroundColor="@color/primary"
             app:cardCornerRadius="10dp"
             app:cardElevation="5dp"
@@ -101,6 +138,7 @@
                     android:textSize="14sp" />
 
                 <LinearLayout
+
                     android:id="@+id/llOriginLocation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -202,7 +240,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="55dp"
                     android:layout_marginTop="25dp"
-                    android:text="@string/search_for_driver"
+                    android:text="@string/start_routing"
                     android:textColor="@color/just_white"
                     android:textFontWeight="700"
                     android:visibility="@{fetchRoutingLoading?View.GONE:View.VISIBLE}"
@@ -253,7 +291,9 @@
                 android:orientation="vertical"
                 android:visibility="@{isRouting?View.VISIBLE:View.GONE}"
                 tools:visibility="visible">
+
                 <include
+
                     android:id="@+id/currentStep"
                     layout="@layout/steps_item_view"
                     android:layout_width="match_parent"
@@ -326,14 +366,13 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cvTop"
+            android:id="@+id/cvNextStep"
             style="@style/Widget.Material3.CardView.Filled"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_margin="15dp"
             android:clickable="true"
             android:focusable="true"
-            android:visibility="@{isRouting?View.VISIBLE:View.GONE}"
             app:cardBackgroundColor="@color/primary"
             app:cardCornerRadius="10dp"
             app:cardElevation="5dp"

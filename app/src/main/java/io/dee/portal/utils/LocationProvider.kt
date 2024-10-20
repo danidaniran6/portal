@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
 import android.os.Looper
+import android.util.Log
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -19,6 +20,7 @@ import javax.inject.Inject
 class LocationProvider @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    val TAG = "LocationProvider"
     private val _locationFlow =
         MutableStateFlow<LocationProviderState?>(LocationProviderState.Loading)
     val locationFlow = _locationFlow.asStateFlow()
@@ -28,8 +30,8 @@ class LocationProvider @Inject constructor(
 
     private var locationCallback: LocationCallback? = null
     private var locationRequest: LocationRequest = LocationRequest().apply {
-        interval = 8000 // Update interval in milliseconds
-        fastestInterval = 3500 // Fastest update interval in milliseconds
+        interval = 2000
+        fastestInterval = 1000
         priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
     private val locationSettingsRequest: LocationSettingsRequest = LocationSettingsRequest.Builder()
@@ -53,11 +55,14 @@ class LocationProvider @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun startLocationUpdatesInternal() {
-        SettingsClient(context).checkLocationSettings(locationSettingsRequest)
+        fusedLocationClient.requestLocationUpdates(
+            locationRequest, locationCallback, Looper.getMainLooper()
+        )
             .addOnSuccessListener {
                 fusedLocationClient.requestLocationUpdates(
                     locationRequest, locationCallback, Looper.getMainLooper()
                 )
+                Log.d(TAG, "Location updates started!")
             }
             .addOnFailureListener {
                 _locationFlow.value = LocationProviderState.Error(it)
@@ -66,6 +71,12 @@ class LocationProvider @Inject constructor(
 
     fun stopLocationUpdatesInternal() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
+            .addOnSuccessListener {
+                Log.d(TAG, "Location updates stopped!")
+            }
+            .addOnFailureListener {
+                Log.d(TAG, "Location updates failed to stop!")
+            }
         _locationFlow.value = null
     }
 

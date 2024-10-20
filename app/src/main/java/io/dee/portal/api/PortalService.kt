@@ -39,7 +39,7 @@ interface PortalService {
     suspend fun fetchRouting(
         @Query("origin") origin: String,
         @Query("destination") destination: String,
-        @Query("bearing") bearing: Int,
+
         @Query("type") mode: String = "car",
         @Query("alternative") alternative: Boolean = true,
     ): Response<RouteResponse>

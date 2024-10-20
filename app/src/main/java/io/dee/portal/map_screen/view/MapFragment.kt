@@ -3,29 +3,24 @@ package io.dee.portal.map_screen.view
 import android.Manifest
 import android.content.Intent
 import android.content.IntentSender
-import android.content.res.Configuration
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat.getDrawable
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.carto.graphics.Color
-import com.carto.styles.AnimationStyle
-import com.carto.styles.AnimationStyleBuilder
-import com.carto.styles.AnimationType
 import com.carto.styles.LineEndType
 import com.carto.styles.LineJoinType
 import com.carto.styles.LineStyleBuilder
-import com.carto.styles.MarkerStyle
-import com.carto.styles.MarkerStyleBuilder
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationSettingsStatusCodes
@@ -43,18 +38,16 @@ import io.dee.portal.core.view.base.BaseFragment
 import io.dee.portal.databinding.FragmentMapBinding
 import io.dee.portal.map_screen.data.dto.DecodedSteps
 import io.dee.portal.search_screen.view.SearchScreenBottomSheet
+import io.dee.portal.utils.CustomDialog
 import io.dee.portal.utils.LocationProviderState
+import io.dee.portal.utils.MapShapesUtil
 import io.dee.portal.utils.NavigationUtil.calculateBearing
-import io.dee.portal.utils.NetworkStatus
 import io.dee.portal.utils.flowCollect
-import io.dee.portal.utils.flowCollectLatest
 import io.dee.portal.utils.toast
 import org.neshan.common.model.LatLng
-import org.neshan.mapsdk.internal.utils.BitmapUtils
+import org.neshan.mapsdk.MapView
 import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
-import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN
-import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN_NIGHT
 
 
 @AndroidEntryPoint
@@ -66,12 +59,72 @@ class MapFragment : BaseFragment() {
 
     private val stepsAdapter: StepsAdapter = StepsAdapter()
     private var isStepsOpen = false
-    private var shouldMoveCameraToUserLocation: Boolean = true
+    private var moveCameraToUserLocation: Boolean = true
+    private var moveCameraToNavigatorLocation: Boolean = true
+    private val backPressedCallback = object : OnBackPressedCallback(enabled = false) {
+        override fun handleOnBackPressed() {
+            if (viewModel.routingStatus.value == RoutingStatus.InProgress) {
+                "routing in progress".toast(requireContext())
+                showAlertDialog()
+                return
+            }
+            isEnabled = false
+            activity?.onBackPressedDispatcher?.onBackPressed()
+        }
+    }
+    private val backToRouteTimer = object : CountDownTimer(10000, 10) {
+        override fun onTick(millisUntilFinished: Long) {
+            binding.cvBackToRoute.visibility = View.VISIBLE
+            moveCameraToNavigatorLocation = false
+            val progress = 100 - (millisUntilFinished / 10000f * 100).toInt()
+            binding.pbBackToRoute.setProgress(progress)
+        }
+
+        override fun onFinish() {
+            backToTheRoute()
+        }
+    }
+
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         binding = FragmentMapBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        viewModel.onEvent(MapEvents.StopLocationUpdates)
+    }
+
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        requireActivity().onBackPressedDispatcher.addCallback(
+            this.viewLifecycleOwner, backPressedCallback
+        )
+
+        initMap()
+
+    }
+
+    private fun showAlertDialog() {
+        CustomDialog.Builder()
+            .setIcon(R.drawable.ic_round_warning_24, R.color.orange)
+            .setTitle(getString(R.string.warning))
+            .setDescription(getString(R.string.cancel_routing_warning))
+            .setConfirmActionString(getString(R.string.yes))
+            .setCancelActionString(getString(R.string.dismiss)).setConfirmCallback {
+                viewModel.onEvent(MapEvents.CancelRouting)
+                it.dismiss()
+            }.build(requireContext()).show()
+
+    }
+
+    private fun initMap() {
         binding.map.apply {
             cachePath = requireContext().cacheDir
             cacheSize = 10
@@ -80,38 +133,6 @@ class MapFragment : BaseFragment() {
             settings.minTiltAngle = 30f
         }
 
-
-
-        return binding.root
-    }
-
-    override fun onPause() {
-        super.onPause()
-        viewModel.onEvent(MapEvents.StopLocationUpdates)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        Dexter.withContext(requireActivity())
-            .withPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-            .withListener(object : PermissionListener {
-                override fun onPermissionGranted(response: PermissionGrantedResponse?) {
-                    viewModel.onEvent(MapEvents.StartLocationUpdates)
-                }
-
-                override fun onPermissionDenied(response: PermissionDeniedResponse) {
-                    if (response.isPermanentlyDenied) {
-                        openSettings()
-                    }
-                }
-
-                override fun onPermissionRationaleShouldBeShown(
-                    permission: PermissionRequest?, token: PermissionToken
-                ) {
-                    token.continuePermissionRequest()
-                }
-            }).check()
     }
 
     override fun bindVariables() {
@@ -119,7 +140,10 @@ class MapFragment : BaseFragment() {
 
     override fun bindViews() {
         binding.apply {
-            binding.cvTop.setOnClickListener {
+            binding.cvBackToRoute.setOnClickListener {
+                backToTheRoute()
+            }
+            binding.cvNextStep.setOnClickListener {
                 if (!isStepsOpen) openSteps()
                 else closeSteps()
             }
@@ -182,7 +206,23 @@ class MapFragment : BaseFragment() {
                 )
 
             }
+            map.setOnCameraMoveStartListener { p0 ->
+                when (p0) {
 
+                    MapView.CameraMoveType.GESTURE -> {
+                        if (viewModel.routingStatus.value == RoutingStatus.InProgress) {
+                            backToRouteTimer.cancel()
+                            backToRouteTimer.start()
+                        }
+                    }
+
+                    MapView.CameraMoveType.DEVELOPER_ANIMATION -> {
+                        p0
+                    }
+
+                    else -> {}
+                }
+            }
         }
     }
 
@@ -203,14 +243,27 @@ class MapFragment : BaseFragment() {
 
     override fun onResume() {
         super.onResume()
-        val systemUiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        binding.map.setMapStyle(
-            when (systemUiMode) {
-                Configuration.UI_MODE_NIGHT_YES -> NESHAN_NIGHT
-                else -> NESHAN
-            }
-        )
-        viewModel.onEvent(MapEvents.StartLocationUpdates)
+
+        Dexter.withContext(requireActivity())
+            .withPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+            .withListener(object : PermissionListener {
+                override fun onPermissionGranted(response: PermissionGrantedResponse?) {
+                    viewModel.onEvent(MapEvents.StartLocationUpdates)
+                }
+
+                override fun onPermissionDenied(response: PermissionDeniedResponse) {
+                    if (response.isPermanentlyDenied) {
+                        openSettings()
+                    }
+                }
+
+                override fun onPermissionRationaleShouldBeShown(
+                    permission: PermissionRequest?, token: PermissionToken
+                ) {
+                    token.continuePermissionRequest()
+                }
+            }).check()
+
     }
 
 
@@ -225,14 +278,9 @@ class MapFragment : BaseFragment() {
         startActivity(intent)
     }
 
-
     override fun bindObservers() {
 
-        flowCollectLatest(flow = mainViewModel.connectivityStatus) {
-            if (it == NetworkStatus.Connected) {
-                viewModel.onEvent(MapEvents.StartLocationUpdates)
-            }
-        }
+
         viewModel.apply {
             originToDestinationLine.observe(viewLifecycleOwner) { line ->
                 line?.let {
@@ -257,7 +305,7 @@ class MapFragment : BaseFragment() {
                     binding.btnMyLocation.isEnabled = !it
                     binding.btnMyLocation.alpha = if (it) 0.15f else 1f
                 }
-                if (viewModel.routingStatus.value is RoutingStatus.Start) {
+                if (viewModel.routingStatus.value is RoutingStatus.InProgress) {
                     viewModel.onEvent(MapEvents.SetNavigatorLocation(it))
                     viewModel.onEvent(MapEvents.FindCurrentStep)
                 } else onUpdateUserLocation(it)
@@ -361,7 +409,7 @@ class MapFragment : BaseFragment() {
                     is FetchRoutingState.Success -> {
                         clearPolyLine()
                         binding.fetchRoutingLoading = false
-//                        viewModel.onEvent(MapEvents.SetRoutingOverView(state.routeOverView))
+                        viewModel.onEvent(MapEvents.SetRoutingOverView(state.routeOverView))
                         viewModel.onEvent(MapEvents.SetRoutingSteps(state.routeSteps))
                         viewModel.onEvent(MapEvents.StartRouting)
                     }
@@ -377,9 +425,9 @@ class MapFragment : BaseFragment() {
 
 
 
+
             routingSteps.observe(viewLifecycleOwner) { steps ->
-                val list = steps?.filter { it != steps.firstOrNull() }
-                stepsAdapter.submitList(list) {
+                stepsAdapter.submitList(steps) {
                     binding.rcSteps.scrollToPosition(0)
                 }
 
@@ -401,57 +449,85 @@ class MapFragment : BaseFragment() {
 
             }
             routeNextStep.observe(viewLifecycleOwner) { step ->
-                binding.nextStep.tvStepDistance.text = step?.distance?.text ?: ""
-                binding.nextStep.tvStepInstruction.text = step?.instruction
-                val drawable = getDrawable(
-                    requireContext(), DecodedSteps.ModifierEnum.getModifier(step?.modifier).icon
-                )
-                binding.nextStep.ivStepDirection.setImageDrawable(drawable)
+                binding.apply {
+                    cvNextStep.visibility = if (step == null) View.GONE else View.VISIBLE
+                    step?.let {
+                        nextStep.tvStepDistance.text = it.distance?.text ?: ""
+                        nextStep.tvStepInstruction.text = it.instruction
+                        getDrawable(
+                            requireContext(),
+                            DecodedSteps.ModifierEnum.getModifier(it.modifier).icon
+                        ).also { nextStep.ivStepDirection.setImageDrawable(it) }
+                    }
+                }
+
             }
             routeCurrentStep.observe(viewLifecycleOwner) { step ->
-                binding.currentStep.tvStepDistance.text = step?.distance?.text ?: ""
-                binding.currentStep.tvStepInstruction.text = step?.instruction
-                val drawable = getDrawable(
-                    requireContext(), DecodedSteps.ModifierEnum.getModifier(step?.modifier).icon
-                )
-                binding.currentStep.ivStepDirection.setImageDrawable(drawable)
+                binding.apply {
+                    currentStep.tvStepDistance.text = step?.distance?.text ?: ""
+                    currentStep.tvStepInstruction.text = step?.instruction
+                    getDrawable(
+                        requireContext(), DecodedSteps.ModifierEnum.getModifier(step?.modifier).icon
+                    ).also { currentStep.ivStepDirection.setImageDrawable(it) }
+                }
+
                 viewModel.onEvent(MapEvents.SnapToLine)
                 step?.decodedPolyline?.let {
-                    val bearing = calculateBearing(it.first(), it.last())
-                    binding.map.setBearing(bearing, 1f)
-                    binding.map.setTilt(40f, 1f)
-                    binding.map.setZoom(20f, 0.5f)
-                    binding.map.moveCamera(
-                        it.first(), 0.5f
-                    )
+                    if (moveCameraToNavigatorLocation) {
+                        val bearing = calculateBearing(it.first(), it.last())
+                        binding.map.setBearing(bearing, 1f)
+                        binding.map.setTilt(40f, 1f)
+                        binding.map.setZoom(20f, 0.5f)
+                        binding.map.moveCamera(
+                            it.first(), 0.5f
+                        )
+                    }
                 }
             }
             routingStatus.observe(viewLifecycleOwner) {
                 when (it) {
                     is RoutingStatus.Start -> {
                         binding.isRouting = true
-                        viewModel.onEvent(MapEvents.SetUserLocation(viewModel.userLocation.value))
+                        viewModel.onEvent(MapEvents.InProgressRouting)
+                        viewModel.onEvent(MapEvents.SetUserLocation(viewModel.originLocation.value))
                         onUpdateUserLocation(null)
                         onUpdateOriginLocation(null)
                         onUpdateDestinationLocation(null)
                     }
 
+                    is RoutingStatus.InProgress -> {
+                        binding.isRouting = true
+                        backPressedCallback.isEnabled = true
+                        binding.cvBackToRoute.visibility = View.GONE
+                        backToRouteTimer.cancel()
+                        moveCameraToNavigatorLocation = true
+                        viewModel.onEvent(MapEvents.SetRoutCurrentStep(viewModel.routeCurrentStep.value))
+                    }
+
                     is RoutingStatus.Cancel -> {
+                        backPressedCallback.isEnabled = false
+                        binding.cvBackToRoute.visibility = View.GONE
+                        backToRouteTimer.cancel()
                         binding.isRouting = false
                         enableButtons()
                         clearRoutingLine()
-                        shouldMoveCameraToUserLocation = true
+                        moveCameraToUserLocation = true
                         viewModel.onEvent(MapEvents.SetUserLocation(viewModel.userLocation.value))
                     }
 
+
                     is RoutingStatus.Finished -> {
+                        backPressedCallback.isEnabled = false
+                        binding.cvBackToRoute.visibility = View.GONE
+                        backToRouteTimer.cancel()
                         binding.isRouting = false
                         enableButtons()
                         clearRoutingLine()
-                        shouldMoveCameraToUserLocation = true
+                        moveCameraToUserLocation = true
                         viewModel.onEvent(MapEvents.SetUserLocation(viewModel.userLocation.value))
                         getString(R.string.finish_routing).toast(requireContext())
                     }
+
                 }
 
             }
@@ -501,19 +577,19 @@ class MapFragment : BaseFragment() {
     }
 
     private fun mapSetPosition(overview: Boolean) {
-//        val centerFirstMarkerX = viewModel.originMarker.value!!.latLng.latitude
-//        val centerFirstMarkerY = viewModel.originMarker.value!!.latLng.longitude
-//        if (overview) {
-//            val centerFocalPositionX =
-//                (centerFirstMarkerX + viewModel.destinationMarker.value!!.latLng.latitude) / 2
-//            val centerFocalPositionY =
-//                (centerFirstMarkerY + viewModel.destinationMarker.value!!.latLng.longitude) / 2
-//            binding.map.moveCamera(LatLng(centerFocalPositionX, centerFocalPositionY), 0.5f)
-//        } else {
-//            binding.map.moveCamera(LatLng(centerFirstMarkerX, centerFirstMarkerY), 0.5f)
-//
-//
-//        }
+        val centerFirstMarkerX = viewModel.originMarker.value!!.latLng.latitude
+        val centerFirstMarkerY = viewModel.originMarker.value!!.latLng.longitude
+        if (overview) {
+            val centerFocalPositionX =
+                (centerFirstMarkerX + viewModel.destinationMarker.value!!.latLng.latitude) / 2
+            val centerFocalPositionY =
+                (centerFirstMarkerY + viewModel.destinationMarker.value!!.latLng.longitude) / 2
+            binding.map.moveCamera(LatLng(centerFocalPositionX, centerFocalPositionY), 0.5f)
+        } else {
+            binding.map.moveCamera(LatLng(centerFirstMarkerX, centerFirstMarkerY), 0.5f)
+
+
+        }
     }
 
 
@@ -531,19 +607,19 @@ class MapFragment : BaseFragment() {
             return
         }
         val latLng = loc.getLatLng()
-        val userMarkerStyle = buildUserMarkerStyle()
+        val userMarkerStyle = MapShapesUtil.buildUserMarkerStyle(resources = resources)
         viewModel.onEvent(MapEvents.SetUserMarker(Marker(latLng, userMarkerStyle).apply {
             title = "User"
 
         }))
-        if (shouldMoveCameraToUserLocation) {
+        if (moveCameraToUserLocation) {
             binding.map.setZoom(16f, 0.5f)
             binding.map.setBearing(loc.bearing, 0.5f)
             binding.map.setTilt(90f, 1f)
             binding.map.moveCamera(
                 LatLng(latLng.latitude, latLng.longitude), 0.25f
             )
-            shouldMoveCameraToUserLocation = false
+            moveCameraToUserLocation = false
         }
     }
 
@@ -557,14 +633,16 @@ class MapFragment : BaseFragment() {
         }
         if (viewModel.navigatorMarker.value != null) {
             viewModel.navigatorMarker.value?.setLatLng(loc.getLatLng())
-            binding.map.moveCamera(
-                LatLng(loc.latitude, loc.longitude), 0.25f
-            )
+            if (moveCameraToNavigatorLocation) {
+                binding.map.moveCamera(
+                    LatLng(loc.latitude, loc.longitude), 0.25f
+                )
+            }
             return
         }
 
         val latLng = loc.getLatLng()
-        val navigatorMarkerStyle = buildNavigationMarkerStyle()
+        val navigatorMarkerStyle = MapShapesUtil.buildNavigationMarkerStyle(resources = resources)
         viewModel.onEvent(
             MapEvents.SetNavigatorMarker(Marker(
                 latLng, navigatorMarkerStyle
@@ -572,9 +650,10 @@ class MapFragment : BaseFragment() {
                 title = "navigator"
             })
         )
-        binding.map.moveCamera(
-            LatLng(latLng.latitude, latLng.longitude), 0.25f
-        )
+        if (moveCameraToNavigatorLocation)
+            binding.map.moveCamera(
+                LatLng(latLng.latitude, latLng.longitude), 0.25f
+            )
     }
 
     private fun onUpdateOriginLocation(loc: Location?) {
@@ -587,11 +666,10 @@ class MapFragment : BaseFragment() {
             clearPolyLine()
         }
 
-//        binding.tvOriginLocation.text = loc?.getAddressOrLatLngString() ?: ""
 
         if (loc == null) return
         val location = loc.getLatLng()
-        val marketStyle = buildOriginMarkerStyle()
+        val marketStyle = MapShapesUtil.buildOriginMarkerStyle(resources = resources)
         viewModel.onEvent(MapEvents.SetOriginMarker(Marker(location, marketStyle).apply {
             title = "Origin"
         }))
@@ -612,7 +690,7 @@ class MapFragment : BaseFragment() {
         if (loc == null) return
         val location = loc.getLatLng()
 
-        val marketStyle = buildDestinationMarkerStyle()
+        val marketStyle = MapShapesUtil.buildDestinationMarkerStyle(resources = resources)
 
         viewModel.onEvent(MapEvents.SetDestinationMarker(Marker(location, marketStyle).apply {
             title = "Destination"
@@ -621,63 +699,6 @@ class MapFragment : BaseFragment() {
             LatLng(location.latitude, location.longitude), 0.25f
         )
     }
-
-    private fun getAnimationStyle(): AnimationStyle? {
-        val animStBl = AnimationStyleBuilder()
-        animStBl.fadeAnimationType = AnimationType.ANIMATION_TYPE_SMOOTHSTEP
-        animStBl.sizeAnimationType = AnimationType.ANIMATION_TYPE_SPRING
-        animStBl.phaseInDuration = 0.2f
-        animStBl.phaseOutDuration = 0.2f
-        return animStBl.buildStyle()
-    }
-
-    private fun buildUserMarkerStyle(): MarkerStyle {
-        val style = MarkerStyleBuilder()
-        style.size = 30f
-        style.isScaleWithDPI = true
-        style.bitmap = BitmapUtils.createBitmapFromAndroidBitmap(
-            BitmapFactory.decodeResource(
-                resources, org.neshan.mapsdk.R.drawable.ic_marker
-            )
-        )
-        return style.buildStyle()
-    }
-
-    private fun buildNavigationMarkerStyle() = MarkerStyleBuilder().apply {
-
-        size = 25f
-        isScaleWithDPI = true
-        bitmap = BitmapUtils.createBitmapFromAndroidBitmap(
-            BitmapFactory.decodeResource(
-                resources, R.drawable.ic_navigator
-            )
-        )
-        animationStyle = this@MapFragment.getAnimationStyle()
-    }.buildStyle()
-
-    private fun buildOriginMarkerStyle() = MarkerStyleBuilder().apply {
-        size = 20f
-        bitmap = BitmapUtils.createBitmapFromAndroidBitmap(
-            BitmapFactory.decodeResource(
-                resources, org.neshan.mapsdk.R.drawable.ic_cluster_marker_blue
-            )
-        )
-        animationStyle = this@MapFragment.getAnimationStyle()
-
-    }.buildStyle()
-
-    private fun buildDestinationMarkerStyle() = MarkerStyleBuilder().apply {
-
-        size = 20f
-        bitmap = BitmapUtils.createBitmapFromAndroidBitmap(
-            BitmapFactory.decodeResource(
-                resources, org.neshan.mapsdk.R.drawable.ic_cluster_marker_blue
-            )
-        )
-        animationStyle = this@MapFragment.getAnimationStyle()
-
-
-    }.buildStyle()
 
     private fun drawPolyline(origin: Location?, destination: Location?) {
         if (origin == null) return
@@ -695,23 +716,30 @@ class MapFragment : BaseFragment() {
     }
 
     private fun getLineStyle() = LineStyleBuilder().apply {
-            color = Color(2, 119, 189, 190)
-            width = 6f
-            stretchFactor = 10f
-            lineEndType = LineEndType.LINE_END_TYPE_ROUND
-            lineJoinType = LineJoinType.LINE_JOIN_TYPE_ROUND
+        color = Color(2, 119, 189, 190)
+        width = 6f
+        stretchFactor = 10f
+        lineEndType = LineEndType.LINE_END_TYPE_ROUND
+        lineJoinType = LineJoinType.LINE_JOIN_TYPE_ROUND
 
-        }.buildStyle()
+    }.buildStyle()
 
 
     private fun getStepsLineStyle() = LineStyleBuilder().apply {
-            color = Color(2, 119, 189, 190)
-            width = 20f
-            stretchFactor = 10f
-            lineEndType = LineEndType.LINE_END_TYPE_ROUND
-            lineJoinType = LineJoinType.LINE_JOIN_TYPE_ROUND
+        color = Color(2, 119, 189, 190)
+        width = 20f
+        stretchFactor = 10f
+        lineEndType = LineEndType.LINE_END_TYPE_ROUND
+        lineJoinType = LineJoinType.LINE_JOIN_TYPE_ROUND
 
-        }.buildStyle()
+    }.buildStyle()
+
+
+    private fun backToTheRoute() {
+        binding.cvBackToRoute.visibility = View.GONE
+        binding.pbBackToRoute.progress = 0
+        viewModel.onEvent(MapEvents.InProgressRouting)
+    }
 
 
 }

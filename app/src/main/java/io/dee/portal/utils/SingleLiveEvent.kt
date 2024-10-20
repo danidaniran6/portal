@@ -12,7 +12,7 @@ class SingleLiveEvent<T>() : MutableLiveData<T>() {
     private val TAG = this.javaClass.name
 
     constructor(value: T) : this() {
-        super.setValue(value)
+        this.setValue(value)
     }
 
 
