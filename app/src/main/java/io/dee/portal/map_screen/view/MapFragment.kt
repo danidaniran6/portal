@@ -21,10 +21,6 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.content.ContextCompat.getDrawable
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.carto.graphics.Color
-import com.carto.styles.LineEndType
-import com.carto.styles.LineJoinType
-import com.carto.styles.LineStyleBuilder
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import com.google.android.gms.location.LocationSettingsStatusCodes
@@ -50,14 +46,16 @@ import io.dee.portal.utils.flowCollect
 import io.dee.portal.utils.toast
 import org.neshan.common.model.LatLng
 import org.neshan.mapsdk.MapView
-import org.neshan.mapsdk.model.Marker
-import org.neshan.mapsdk.model.Polyline
 import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN
 import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN_NIGHT
+import javax.inject.Inject
 
 
 @AndroidEntryPoint
 class MapFragment : BaseFragment() {
+
+    @Inject
+    lateinit var mapShapesUtil: MapShapesUtil
     private val TAG = MapFragment::class.java.name
     private val REQUEST_CODE = 100
     private lateinit var binding: FragmentMapBinding
@@ -461,9 +459,7 @@ class MapFragment : BaseFragment() {
                     return@fold acc
                 }
                 if (!polylineList.isNullOrEmpty()) {
-                    val onMapPolyline = Polyline(
-                        polylineList, getStepsLineStyle()
-                    )
+                    val onMapPolyline = mapShapesUtil.provideStepsPolyline(polylineList)
                     clearRoutingLine()
                     viewModel.onEvent(MapEvents.SetRoutePolyline(onMapPolyline))
                 } else {
@@ -635,11 +631,7 @@ class MapFragment : BaseFragment() {
             return
         }
         val latLng = loc.getLatLng()
-        val userMarkerStyle = MapShapesUtil.buildUserMarkerStyle(resources = resources)
-        viewModel.onEvent(MapEvents.SetUserMarker(Marker(latLng, userMarkerStyle).apply {
-            title = "User"
-
-        }))
+        viewModel.onEvent(MapEvents.SetUserMarker(mapShapesUtil.provideUserMarker(location = latLng)))
         if (moveCameraToUserLocation) {
             binding.map.setZoom(17f, 0.5f)
             viewModel.onEvent(MapEvents.SetMapBearing(loc.bearing))
@@ -670,13 +662,8 @@ class MapFragment : BaseFragment() {
         }
 
         val latLng = loc.getLatLng()
-        val navigatorMarkerStyle = MapShapesUtil.buildNavigationMarkerStyle(resources = resources)
         viewModel.onEvent(
-            MapEvents.SetNavigatorMarker(Marker(
-                latLng, navigatorMarkerStyle
-            ).apply {
-                title = "navigator"
-            })
+            MapEvents.SetNavigatorMarker(mapShapesUtil.provideNavigationMarker(location = loc.getLatLng()))
         )
         if (moveCameraToNavigatorLocation) binding.map.moveCamera(
             LatLng(latLng.latitude, latLng.longitude), 0.25f
@@ -696,10 +683,7 @@ class MapFragment : BaseFragment() {
 
         if (loc == null) return
         val location = loc.getLatLng()
-        val marketStyle = MapShapesUtil.buildOriginMarkerStyle(resources = resources)
-        viewModel.onEvent(MapEvents.SetOriginMarker(Marker(location, marketStyle).apply {
-            title = "Origin"
-        }))
+        viewModel.onEvent(MapEvents.SetOriginMarker(mapShapesUtil.provideOriginMarker(location)))
     }
 
     private fun onUpdateDestinationLocation(loc: Location?) {
@@ -713,12 +697,13 @@ class MapFragment : BaseFragment() {
         }
         if (loc == null) return
         val location = loc.getLatLng()
-
-        val marketStyle = MapShapesUtil.buildDestinationMarkerStyle(resources = resources)
-
-        viewModel.onEvent(MapEvents.SetDestinationMarker(Marker(location, marketStyle).apply {
-            title = "Destination"
-        }))
+        viewModel.onEvent(
+            MapEvents.SetDestinationMarker(
+                mapShapesUtil.provideDestinationMarker(
+                    location
+                )
+            )
+        )
         binding.map.moveCamera(
             LatLng(location.latitude, location.longitude), 0.25f
         )
@@ -734,32 +719,13 @@ class MapFragment : BaseFragment() {
         val latLngs = ArrayList<LatLng>()
         latLngs.add(origin.getLatLng())
         latLngs.add(destination.getLatLng())
-        val polyline = Polyline(latLngs, getLineStyle())
+        val polyline = mapShapesUtil.provideOriginToDestinationLine(latLngs)
         val bearing = NavigationUtil.calculateBearing(origin.getLatLng(), destination.getLatLng())
         viewModel.onEvent(MapEvents.SetMapBearing(bearing))
         viewModel.onEvent(MapEvents.SetOriginToDestinationLine(polyline))
         mapSetPosition(true)
 
     }
-
-    private fun getLineStyle() = LineStyleBuilder().apply {
-        color = Color(2, 119, 189, 190)
-        width = 6f
-        stretchFactor = 10f
-        lineEndType = LineEndType.LINE_END_TYPE_ROUND
-        lineJoinType = LineJoinType.LINE_JOIN_TYPE_ROUND
-
-    }.buildStyle()
-
-
-    private fun getStepsLineStyle() = LineStyleBuilder().apply {
-        color = Color(2, 119, 189, 190)
-        width = 20f
-        stretchFactor = 10f
-        lineEndType = LineEndType.LINE_END_TYPE_ROUND
-        lineJoinType = LineJoinType.LINE_JOIN_TYPE_ROUND
-
-    }.buildStyle()
 
 
     private fun backToTheRoute() {
