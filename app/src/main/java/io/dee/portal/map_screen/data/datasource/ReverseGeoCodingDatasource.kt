@@ -1,6 +1,6 @@
 package io.dee.portal.map_screen.data.datasource
 
-import io.dee.portal.api.PortalService
+import io.dee.portal.core.data.api.PortalService
 import io.dee.portal.map_screen.data.dto.ReverseGeocodingResponse
 
 interface ReverseGeoCodingDatasource {

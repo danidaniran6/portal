@@ -30,7 +30,7 @@ class MapRepositoryImpl(
     override suspend fun reverseGeocoding(lat: Double, lng: Double): String {
         return withContext(Dispatchers.IO) {
             val res = datasource.reverseGeocoding(lat, lng)
-            if (res.status == "Ok") {
+            if (res.status.equals("OK", true)) {
                 res.formattedAddress ?: ""
             } else {
                 ""
@@ -47,11 +47,9 @@ class MapRepositoryImpl(
                 if (res.isSuccessful && res.body() != null) {
                     val routes = res.body()!!.routes
                     if (!routes.isNullOrEmpty()) {
-
-                        val firstRoute = routes[0]
                         val overviewData = withContext(Dispatchers.Default) {
                             routes.fold(mutableListOf<List<DecodedSteps>>()) { acc, route ->
-                                val steps = firstRoute.legs?.getOrNull(0)?.steps
+                                val steps = route.legs?.getOrNull(0)?.steps
                                 val decodedPolyline =
                                     steps?.map {
                                         DecodedSteps(
@@ -69,23 +67,23 @@ class MapRepositoryImpl(
                                 return@fold acc
                             }
                         }
-                        val steps = firstRoute.legs?.getOrNull(0)?.steps
-                        val decodedPolyline = withContext(Dispatchers.Default) {
-                            steps?.map {
-                                DecodedSteps(
-                                    it.name,
-                                    it.distance,
-                                    it.duration,
-                                    it.instruction,
-                                    it.modifier,
-                                    PolylineEncoding.decode(it.polyline ?: "")
-                                )
-                            }
-                        }
+//                        val steps = firstRoute.legs?.getOrNull(0)?.steps
+//                        val decodedPolyline = withContext(Dispatchers.Default) {
+//                            steps?.map {
+//                                DecodedSteps(
+//                                    it.name,
+//                                    it.distance,
+//                                    it.duration,
+//                                    it.instruction,
+//                                    it.modifier,
+//                                    PolylineEncoding.decode(it.polyline ?: "")
+//                                )
+//                            }
+//                        }
 
                         FetchRoutingState.Success(
                             overviewData,
-                            decodedPolyline ?: emptyList()
+                            overviewData.firstOrNull() ?: emptyList()
                         )
                     } else {
                         FetchRoutingState.Error("Something went wrong")

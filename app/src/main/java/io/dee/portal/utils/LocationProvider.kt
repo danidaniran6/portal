@@ -11,7 +11,6 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.LocationSettingsRequest
-import com.google.android.gms.location.SettingsClient
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,8 +29,8 @@ class LocationProvider @Inject constructor(
 
     private var locationCallback: LocationCallback? = null
     private var locationRequest: LocationRequest = LocationRequest().apply {
-        interval = 2000
-        fastestInterval = 1000
+        interval = 1000
+        fastestInterval = 500
         priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
     private val locationSettingsRequest: LocationSettingsRequest = LocationSettingsRequest.Builder()
@@ -55,13 +54,17 @@ class LocationProvider @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun startLocationUpdatesInternal() {
+        fusedLocationClient.lastLocation.addOnSuccessListener {
+            if (it != null) {
+                _locationFlow.value =
+                    LocationProviderState.Success(io.dee.portal.core.data.local.Location(it))
+            }
+        }
         fusedLocationClient.requestLocationUpdates(
             locationRequest, locationCallback, Looper.getMainLooper()
         )
             .addOnSuccessListener {
-                fusedLocationClient.requestLocationUpdates(
-                    locationRequest, locationCallback, Looper.getMainLooper()
-                )
+
                 Log.d(TAG, "Location updates started!")
             }
             .addOnFailureListener {
@@ -85,7 +88,9 @@ class LocationProvider @Inject constructor(
 
 sealed interface LocationProviderState {
     data object Loading : LocationProviderState
-    data class Success(val location: io.dee.portal.core.data.local.Location) : LocationProviderState
+    data class Success(val location: io.dee.portal.core.data.local.Location) :
+        LocationProviderState
+
     data class Error(val exception: Exception) : LocationProviderState
 }
 

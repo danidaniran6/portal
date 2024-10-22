@@ -4,7 +4,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import io.dee.portal.api.PortalService
+import io.dee.portal.core.data.api.PortalService
 import io.dee.portal.core.data.db.dao.LocationDataDao
 import io.dee.portal.map_screen.data.datasource.LocationProviderDatasource
 import io.dee.portal.map_screen.data.datasource.LocationProviderDatasourceImpl

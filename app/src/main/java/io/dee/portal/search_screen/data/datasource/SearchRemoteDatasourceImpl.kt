@@ -1,6 +1,6 @@
 package io.dee.portal.search_screen.data.datasource
 
-import io.dee.portal.api.PortalService
+import io.dee.portal.core.data.api.PortalService
 import io.dee.portal.search_screen.data.dto.SearchDto
 
 class SearchRemoteDatasourceImpl(private val service: PortalService) : SearchRemoteDatasource {

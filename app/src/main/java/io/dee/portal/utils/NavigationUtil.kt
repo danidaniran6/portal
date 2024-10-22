@@ -25,7 +25,7 @@ object NavigationUtil {
                 }
 
             }
-            closestPoint  ?: location
+            closestPoint ?: location
         }
 
     }
@@ -34,7 +34,7 @@ object NavigationUtil {
     suspend fun findCurrentStep(
         currentLocation: LatLng,
         steps: List<DecodedSteps>,
-        tolerance: Double = 10.0,
+        tolerance: Double = 5.0,
     ): CurrentStepState {
         return withContext(Dispatchers.Default) {
             var closestStepIndex = -1

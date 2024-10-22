@@ -1,4 +1,4 @@
-package io.dee.portal.api
+package io.dee.portal.core.data.api
 
 import android.content.Context
 import io.dee.portal.map_screen.data.dto.ReverseGeocodingResponse

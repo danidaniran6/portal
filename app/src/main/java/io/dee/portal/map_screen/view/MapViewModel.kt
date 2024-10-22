@@ -120,6 +120,10 @@ class MapViewModel @Inject constructor(
             MapEvents.SnapToLine -> {
                 snapToLine()
             }
+
+            is MapEvents.SetMapBearing -> {
+                setBearing(event.bearing)
+            }
         }
     }
 
@@ -128,7 +132,6 @@ class MapViewModel @Inject constructor(
     private fun startRouting() {
         _routingStatus.value = RoutingStatus.Start
     }
-
     private fun cancelRouting() {
         updateNavigatorLocation(null)
         updateOriginLocation(null)
@@ -170,6 +173,7 @@ class MapViewModel @Inject constructor(
     val navigatorLocation: LiveData<Location?> get() = _navigatorLocation
     private fun updateNavigatorLocation(location: Location?) {
         _navigatorLocation.value = location
+        calculateBearing()
     }
 
     private val _navigatorMarker: SingleLiveEvent<Marker?> = SingleLiveEvent()
@@ -186,6 +190,15 @@ class MapViewModel @Inject constructor(
     private fun updateOriginLocation(location: Location?) = viewModelScope.launch {
         withContext(Dispatchers.Main) {
             _originLocation.value = location
+            if (location != null && location.address.isEmpty()) {
+                val address =
+                    repository.reverseGeocoding(lat = location.latitude, lng = location.longitude)
+                if (address.isNotEmpty()) {
+                    location.address = address
+                    location.title = address
+                    _originLocation.value = location
+                }
+            }
         }
     }
 
@@ -195,6 +208,15 @@ class MapViewModel @Inject constructor(
     private fun updateDestinationLocation(location: Location?) = viewModelScope.launch {
         withContext(Dispatchers.Main) {
             _destinationLocation.value = location
+            if (location != null && location.address.isEmpty()) {
+                val address =
+                    repository.reverseGeocoding(lat = location.latitude, lng = location.longitude)
+                if (address.isNotEmpty()) {
+                    location.address = address
+                    location.title = address
+                    _destinationLocation.value = location
+                }
+            }
         }
     }
 
@@ -254,10 +276,14 @@ class MapViewModel @Inject constructor(
         when (res) {
             is NavigationUtil.CurrentStepState.StepFounded -> {
                 val currentStep = _routingSteps.value?.getOrNull(res.stepIndex)
-                    ?: _routingSteps.value?.firstOrNull()
-                val nextStep = _routingSteps.value?.getOrNull(res.stepIndex + 1)
+                if (res.stepIndex >= 0 && currentStep != null && currentStep != routeCurrentStep.value) {
+                    val nextStep = _routingSteps.value?.getOrNull(res.stepIndex + 1)
+                    updateNextStep(nextStep)
+                    val list =
+                        _routingSteps.value?.subList(res.stepIndex, _routingSteps.value!!.size)
+                    _routingSteps.value = list
+                }
                 updateRoutCurrentStep(currentStep)
-                updateNextStep(nextStep)
             }
 
             is NavigationUtil.CurrentStepState.RouteFinished -> {
@@ -277,15 +303,37 @@ class MapViewModel @Inject constructor(
 
     private fun snapToLine() = viewModelScope.launch {
         if (_navigatorLocation.value == null) return@launch
-        if (_routeCurrentStep.value?.decodedPolyline.isNullOrEmpty()) return@launch
+        if (_routeCurrentStep.value == null) {
+            updateNavigatorLocation(_navigatorLocation.value)
+            return@launch
+        }
+        if (_routeCurrentStep.value!!.decodedPolyline.isNullOrEmpty()) {
+            updateNavigatorLocation(_navigatorLocation.value)
+            return@launch
+        }
         val snappedLocation = NavigationUtil.snapToLine(
             _navigatorLocation.value!!.getLatLng(),
             _routeCurrentStep.value!!.decodedPolyline ?: emptyList()
         )
-
+        calculateBearing()
         updateNavigatorLocation(Location(snappedLocation))
     }
 
+    private fun calculateBearing() {
+        if (_navigatorLocation.value == null) return
+        _routeCurrentStep.value?.decodedPolyline?.lastOrNull()?.let {
+            val calculateBearing = NavigationUtil.calculateBearing(
+                _navigatorLocation.value!!.getLatLng(), it
+            )
+            setBearing(calculateBearing)
+        }
+    }
+
+    private val _bearing: SingleLiveEvent<Float> = SingleLiveEvent()
+    var bearing: LiveData<Float> = _bearing
+    private fun setBearing(bearing: Float) {
+        _bearing.value = bearing
+    }
 }
 
 sealed interface FetchRoutingState {

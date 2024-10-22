@@ -3,6 +3,7 @@ package io.dee.portal.map_screen.view
 import android.Manifest
 import android.content.Intent
 import android.content.IntentSender
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -11,6 +12,9 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.Animation
+import android.view.animation.Interpolator
+import android.view.animation.LinearInterpolator
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintSet
@@ -41,13 +45,15 @@ import io.dee.portal.search_screen.view.SearchScreenBottomSheet
 import io.dee.portal.utils.CustomDialog
 import io.dee.portal.utils.LocationProviderState
 import io.dee.portal.utils.MapShapesUtil
-import io.dee.portal.utils.NavigationUtil.calculateBearing
+import io.dee.portal.utils.NavigationUtil
 import io.dee.portal.utils.flowCollect
 import io.dee.portal.utils.toast
 import org.neshan.common.model.LatLng
 import org.neshan.mapsdk.MapView
 import org.neshan.mapsdk.model.Marker
 import org.neshan.mapsdk.model.Polyline
+import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN
+import org.neshan.mapsdk.style.NeshanMapStyle.NESHAN_NIGHT
 
 
 @AndroidEntryPoint
@@ -77,7 +83,8 @@ class MapFragment : BaseFragment() {
             binding.cvBackToRoute.visibility = View.VISIBLE
             moveCameraToNavigatorLocation = false
             val progress = 100 - (millisUntilFinished / 10000f * 100).toInt()
-            binding.pbBackToRoute.setProgress(progress)
+
+            binding.pbBackToRoute.setProgress(progress, true)
         }
 
         override fun onFinish() {
@@ -112,8 +119,7 @@ class MapFragment : BaseFragment() {
     }
 
     private fun showAlertDialog() {
-        CustomDialog.Builder()
-            .setIcon(R.drawable.ic_round_warning_24, R.color.orange)
+        CustomDialog.Builder().setIcon(R.drawable.ic_round_warning_24, R.color.orange)
             .setTitle(getString(R.string.warning))
             .setDescription(getString(R.string.cancel_routing_warning))
             .setConfirmActionString(getString(R.string.yes))
@@ -140,6 +146,16 @@ class MapFragment : BaseFragment() {
 
     override fun bindViews() {
         binding.apply {
+            binding.pbBackToRoute.animation = object : Animation() {
+                override fun willChangeBounds(): Boolean {
+                    return true
+                }
+
+                override fun setInterpolator(i: Interpolator?) {
+                    super.setInterpolator(LinearInterpolator())
+                }
+
+            }
             binding.cvBackToRoute.setOnClickListener {
                 backToTheRoute()
             }
@@ -196,7 +212,7 @@ class MapFragment : BaseFragment() {
             }
 
             map.setOnMapLongClickListener {
-                if (binding.isRouting == true) return@setOnMapLongClickListener
+                if (viewModel.routingStatus.value == RoutingStatus.InProgress) return@setOnMapLongClickListener
                 viewModel.onEvent(
                     MapEvents.SetOriginDestinationLocation(
                         origin = viewModel.userLocation.value, destination = Location(
@@ -243,7 +259,13 @@ class MapFragment : BaseFragment() {
 
     override fun onResume() {
         super.onResume()
-
+        val systemUiMode = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        binding.map.setMapStyle(
+            when (systemUiMode) {
+                Configuration.UI_MODE_NIGHT_YES -> NESHAN_NIGHT
+                else -> NESHAN
+            }
+        )
         Dexter.withContext(requireActivity())
             .withPermission(Manifest.permission.ACCESS_FINE_LOCATION)
             .withListener(object : PermissionListener {
@@ -297,6 +319,7 @@ class MapFragment : BaseFragment() {
             routePolyline.observe(viewLifecycleOwner) { line ->
                 line?.let {
                     binding.map.addPolyline(it)
+
                 }
 
             }
@@ -441,6 +464,7 @@ class MapFragment : BaseFragment() {
                     val onMapPolyline = Polyline(
                         polylineList, getStepsLineStyle()
                     )
+                    clearRoutingLine()
                     viewModel.onEvent(MapEvents.SetRoutePolyline(onMapPolyline))
                 } else {
                     clearRoutingLine()
@@ -472,17 +496,6 @@ class MapFragment : BaseFragment() {
                 }
 
                 viewModel.onEvent(MapEvents.SnapToLine)
-                step?.decodedPolyline?.let {
-                    if (moveCameraToNavigatorLocation) {
-                        val bearing = calculateBearing(it.first(), it.last())
-                        binding.map.setBearing(bearing, 1f)
-                        binding.map.setTilt(40f, 1f)
-                        binding.map.setZoom(20f, 0.5f)
-                        binding.map.moveCamera(
-                            it.first(), 0.5f
-                        )
-                    }
-                }
             }
             routingStatus.observe(viewLifecycleOwner) {
                 when (it) {
@@ -531,6 +544,21 @@ class MapFragment : BaseFragment() {
                 }
 
             }
+            bearing.observe(viewLifecycleOwner) {
+                when {
+                    viewModel.routingStatus.value == RoutingStatus.InProgress -> {
+                        if (moveCameraToNavigatorLocation) {
+                            binding.map.setBearing(it, 0.75f)
+                            binding.map.setTilt(40f, 0.75f)
+                            binding.map.setZoom(20f, 0.75f)
+                        }
+                    }
+
+                    else -> {
+                        if (moveCameraToUserLocation) binding.map.setBearing(it, 1f)
+                    }
+                }
+            }
         }
 
     }
@@ -577,13 +605,13 @@ class MapFragment : BaseFragment() {
     }
 
     private fun mapSetPosition(overview: Boolean) {
-        val centerFirstMarkerX = viewModel.originMarker.value!!.latLng.latitude
-        val centerFirstMarkerY = viewModel.originMarker.value!!.latLng.longitude
+        val centerFirstMarkerX = viewModel.originLocation.value!!.latitude
+        val centerFirstMarkerY = viewModel.originLocation.value!!.longitude
         if (overview) {
             val centerFocalPositionX =
-                (centerFirstMarkerX + viewModel.destinationMarker.value!!.latLng.latitude) / 2
+                (centerFirstMarkerX + viewModel.destinationLocation.value!!.latitude) / 2
             val centerFocalPositionY =
-                (centerFirstMarkerY + viewModel.destinationMarker.value!!.latLng.longitude) / 2
+                (centerFirstMarkerY + viewModel.destinationLocation.value!!.longitude) / 2
             binding.map.moveCamera(LatLng(centerFocalPositionX, centerFocalPositionY), 0.5f)
         } else {
             binding.map.moveCamera(LatLng(centerFirstMarkerX, centerFirstMarkerY), 0.5f)
@@ -613,8 +641,8 @@ class MapFragment : BaseFragment() {
 
         }))
         if (moveCameraToUserLocation) {
-            binding.map.setZoom(16f, 0.5f)
-            binding.map.setBearing(loc.bearing, 0.5f)
+            binding.map.setZoom(17f, 0.5f)
+            viewModel.onEvent(MapEvents.SetMapBearing(loc.bearing))
             binding.map.setTilt(90f, 1f)
             binding.map.moveCamera(
                 LatLng(latLng.latitude, latLng.longitude), 0.25f
@@ -635,7 +663,7 @@ class MapFragment : BaseFragment() {
             viewModel.navigatorMarker.value?.setLatLng(loc.getLatLng())
             if (moveCameraToNavigatorLocation) {
                 binding.map.moveCamera(
-                    LatLng(loc.latitude, loc.longitude), 0.25f
+                    LatLng(loc.latitude, loc.longitude), 0.75f
                 )
             }
             return
@@ -650,10 +678,9 @@ class MapFragment : BaseFragment() {
                 title = "navigator"
             })
         )
-        if (moveCameraToNavigatorLocation)
-            binding.map.moveCamera(
-                LatLng(latLng.latitude, latLng.longitude), 0.25f
-            )
+        if (moveCameraToNavigatorLocation) binding.map.moveCamera(
+            LatLng(latLng.latitude, latLng.longitude), 0.25f
+        )
     }
 
     private fun onUpdateOriginLocation(loc: Location?) {
@@ -673,9 +700,6 @@ class MapFragment : BaseFragment() {
         viewModel.onEvent(MapEvents.SetOriginMarker(Marker(location, marketStyle).apply {
             title = "Origin"
         }))
-        binding.map.moveCamera(
-            LatLng(location.latitude, location.longitude), 0.25f
-        )
     }
 
     private fun onUpdateDestinationLocation(loc: Location?) {
@@ -711,7 +735,10 @@ class MapFragment : BaseFragment() {
         latLngs.add(origin.getLatLng())
         latLngs.add(destination.getLatLng())
         val polyline = Polyline(latLngs, getLineStyle())
+        val bearing = NavigationUtil.calculateBearing(origin.getLatLng(), destination.getLatLng())
+        viewModel.onEvent(MapEvents.SetMapBearing(bearing))
         viewModel.onEvent(MapEvents.SetOriginToDestinationLine(polyline))
+        mapSetPosition(true)
 
     }
 

@@ -6,7 +6,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import io.dee.portal.api.PortalService
+import io.dee.portal.core.data.api.PortalService
 import javax.inject.Singleton
 
 @Module
